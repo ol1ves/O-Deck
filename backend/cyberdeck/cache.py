@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import json
 import sqlite3
 import threading
@@ -39,11 +40,17 @@ class Cache:
 
     def get(self, key: str) -> Any | None:
         entry = self.get_entry(key)
-        return entry.payload if entry else None
+        return copy.deepcopy(entry.payload) if entry else None
 
     def get_entry(self, key: str) -> CacheEntry | None:
         with self._lock:
-            return self._mem.get(key)
+            entry = self._mem.get(key)
+            if entry is None:
+                return None
+            return CacheEntry(
+                payload=copy.deepcopy(entry.payload),
+                fetched_at=entry.fetched_at,
+            )
 
     def set(self, key: str, payload: Any) -> bool:
         serialized = json.dumps(payload, sort_keys=True, default=str)
@@ -57,8 +64,8 @@ class Cache:
                     return False
 
             fetched_at = time.time()
-            self._mem[key] = CacheEntry(payload=payload, fetched_at=fetched_at)
             self._persist(key, serialized, fetched_at)
+            self._mem[key] = CacheEntry(payload=copy.deepcopy(payload), fetched_at=fetched_at)
             return True
 
     def _persist(self, key: str, serialized: str, fetched_at: float) -> None:

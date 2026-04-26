@@ -1,6 +1,8 @@
 import sqlite3
 import time
 
+import pytest
+
 from cyberdeck.cache import Cache
 
 
@@ -75,3 +77,48 @@ def test_timestamp_preserved_across_load_from_db(tmp_path):
         row = conn.execute("SELECT fetched_at FROM cache WHERE key = ?", ("k",)).fetchone()
     assert row is not None
     assert row[0] == original.fetched_at
+
+
+def test_get_returns_defensive_copy(tmp_path):
+    cache = Cache(db_path=tmp_path / "cache.db")
+    cache.set("k", {"nested": {"n": 1}})
+
+    first = cache.get("k")
+    assert first is not None
+    first["nested"]["n"] = 999
+
+    second = cache.get("k")
+    assert second == {"nested": {"n": 1}}
+
+
+def test_get_entry_payload_is_defensive_copy(tmp_path):
+    cache = Cache(db_path=tmp_path / "cache.db")
+    cache.set("k", {"nested": {"n": 1}})
+
+    first = cache.get_entry("k")
+    assert first is not None
+    first.payload["nested"]["n"] = 999
+
+    second = cache.get_entry("k")
+    assert second is not None
+    assert second.payload == {"nested": {"n": 1}}
+
+
+def test_set_does_not_mutate_memory_when_persist_fails(tmp_path, monkeypatch):
+    cache = Cache(db_path=tmp_path / "cache.db")
+    cache.set("k", {"v": 1})
+    before = cache.get_entry("k")
+    assert before is not None
+
+    def fail_persist(*_args, **_kwargs):
+        raise RuntimeError("persist failed")
+
+    monkeypatch.setattr(cache, "_persist", fail_persist)
+
+    with pytest.raises(RuntimeError, match="persist failed"):
+        cache.set("k", {"v": 2})
+
+    after = cache.get_entry("k")
+    assert after is not None
+    assert after.payload == {"v": 1}
+    assert after.fetched_at == before.fetched_at
