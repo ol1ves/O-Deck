@@ -51,7 +51,7 @@ calendar:
   google:
     calendar_ids: ["primary"]
   notion:
-    todo_database_ids: []
+    todo_database_ids: []  # Add your Notion database IDs here
     join_strategy: "event_link"
   view: "today_at_a_glance"
 
@@ -76,7 +76,7 @@ rss:
 
 photos:
   source: "icloud_shared_album"
-  icloud_share_url: "https://www.icloud.com/sharedalbum/#..."
+  icloud_share_url: "https://www.icloud.com/sharedalbum/#YOUR_ALBUM_TOKEN"
   local_folder: "~/cyberdeck-photos"
   rotation_seconds: 30
 
