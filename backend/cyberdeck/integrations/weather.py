@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from numbers import Real
 from typing import Any
 
 import httpx
@@ -72,21 +73,23 @@ class WeatherIntegration(Integration):
         current = _required_mapping(raw, "current")
         daily = _required_mapping(raw, "daily")
         hourly_data = _required_mapping(raw, "hourly")
-        hourly_temps = _required_value(hourly_data, "temperature_2m", "hourly.temperature_2m")
+        hourly_temps = _required_number_list(hourly_data, "temperature_2m", "hourly.temperature_2m")
 
-        temp_c = _required_value(current, "temperature_2m", "current.temperature_2m")
-        feels_c = _required_value(current, "apparent_temperature", "current.apparent_temperature")
+        temp_c = _required_number(current, "temperature_2m", "current.temperature_2m")
+        feels_c = _required_number(current, "apparent_temperature", "current.apparent_temperature")
         code_raw = _required_value(current, "weather_code", "current.weather_code")
         try:
             code = int(code_raw)
         except (TypeError, ValueError) as exc:
             raise ValueError("Invalid weather payload: invalid 'current.weather_code'") from exc
 
-        high_c = _required_first(daily, "temperature_2m_max", "daily.temperature_2m_max")
-        low_c = _required_first(daily, "temperature_2m_min", "daily.temperature_2m_min")
+        high_c = _required_first_number(daily, "temperature_2m_max", "daily.temperature_2m_max")
+        low_c = _required_first_number(daily, "temperature_2m_min", "daily.temperature_2m_min")
 
-
-        hourly = [{"h": str(i), "t": _c_to_f(t)} for i, t in enumerate(hourly_temps[:6])]
+        hourly: list[dict[str, float | str]] = []
+        for i, t in enumerate(hourly_temps[:6]):
+            t_num = _coerce_number(t, f"hourly.temperature_2m[{i}]")
+            hourly.append({"h": str(i), "t": _c_to_f(t_num)})
 
         alerts_cfg = self.config.app.weather.alerts
         alerts: list[dict[str, str]] = []
@@ -136,3 +139,28 @@ def _required_first(mapping: dict[str, Any], key: str, path: str) -> Any:
     if not isinstance(value, list) or not value:
         raise ValueError(f"Invalid weather payload: missing '{path}[0]'")
     return value[0]
+
+
+def _required_number(mapping: dict[str, Any], key: str, path: str) -> float:
+    value = _required_value(mapping, key, path)
+    return _coerce_number(value, path)
+
+
+def _required_first_number(mapping: dict[str, Any], key: str, path: str) -> float:
+    value = _required_value(mapping, key, path)
+    if not isinstance(value, list) or not value:
+        raise ValueError(f"Invalid weather payload: missing '{path}[0]'")
+    return _coerce_number(value[0], f"{path}[0]")
+
+
+def _required_number_list(mapping: dict[str, Any], key: str, path: str) -> list[Any]:
+    value = _required_value(mapping, key, path)
+    if not isinstance(value, list):
+        raise ValueError(f"Invalid weather payload: invalid '{path}'")
+    return value
+
+
+def _coerce_number(value: Any, path: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"Invalid weather payload: invalid '{path}'")
+    return float(value)

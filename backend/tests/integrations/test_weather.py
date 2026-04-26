@@ -231,6 +231,39 @@ async def test_fetch_raises_value_error_on_missing_payload_fields(fixture, expec
 
 @pytest.mark.asyncio
 @respx.mock
+async def test_fetch_raises_value_error_on_non_list_hourly_temperature():
+    fixture = {**OPEN_METEO_FIXTURE, "hourly": {"temperature_2m": 10.0}}
+    respx.get(METEO_URL).mock(return_value=httpx.Response(200, json=fixture))
+
+    with pytest.raises(ValueError, match=re.escape("hourly.temperature_2m")):
+        await make_integration().fetch()
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_fetch_raises_value_error_on_non_numeric_current_temperature():
+    fixture = {**OPEN_METEO_FIXTURE, "current": {**OPEN_METEO_FIXTURE["current"], "temperature_2m": "warm"}}
+    respx.get(METEO_URL).mock(return_value=httpx.Response(200, json=fixture))
+
+    with pytest.raises(ValueError, match=re.escape("current.temperature_2m")):
+        await make_integration().fetch()
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_fetch_raises_value_error_on_non_numeric_hourly_temperature_value():
+    fixture = {
+        **OPEN_METEO_FIXTURE,
+        "hourly": {"temperature_2m": [10.0, "bad", 12.0, 13.0, 14.0, 15.0]},
+    }
+    respx.get(METEO_URL).mock(return_value=httpx.Response(200, json=fixture))
+
+    with pytest.raises(ValueError, match=re.escape("hourly.temperature_2m[1]")):
+        await make_integration().fetch()
+
+
+@pytest.mark.asyncio
+@respx.mock
 async def test_fetch_requests_required_query_fields():
     route = respx.get(METEO_URL).mock(return_value=httpx.Response(200, json=OPEN_METEO_FIXTURE))
 
