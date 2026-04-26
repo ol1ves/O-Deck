@@ -1,4 +1,4 @@
-# Cyberdeck Dashboard — Design Spec
+# O-Deck Cyberdeck Dashboard — Design Spec
 
 **Date:** 2026-04-26
 **Status:** Design (awaiting Claude Design UI handoff before implementation)
@@ -6,7 +6,7 @@
 
 ## Purpose
 
-A desk-resident dashboard / command center running on a Raspberry Pi 4B with a 7" ribbon-cable touchscreen. Acts as an ambient information radiator for daily life in NYC and a personal cyberdeck. The hardware will eventually be repurposed as a head unit for a DJ-deck project; until then it lives on Oliver's desk full-time, on its own SD card, so the DJ project can be developed in parallel without conflict.
+A desk-resident dashboard / command center running on a Raspberry Pi 4B with a 7" ribbon-cable touchscreen. Acts as an ambient information radiator for daily life in NYC and a personal cyberdeck called O-Deck. The hardware will eventually be repurposed as a head unit for a DJ-deck project; until then it lives on Oliver's desk full-time, on its own SD card, so the DJ project can be developed in parallel without conflict.
 
 ## Use mode
 
@@ -286,7 +286,7 @@ After install, Oliver SSHes in once, fills in `~/.config/cyberdeck/.env`, runs O
 
 ```yaml
 device:
-  name: "cyberdeck"
+  name: "O-Deck"
   resolution:                   # auto-filled by detect-display.sh; override here
     width: 1024
     height: 600
