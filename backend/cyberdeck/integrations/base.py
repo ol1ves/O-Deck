@@ -40,7 +40,7 @@ class Integration(ABC):
             self._last_success = time.time()
         except Exception as exc:
             self._error_count += 1
-            logger.exception(
+            logger.error(
                 "integration %s failed (error #%d): %s",
                 self.name,
                 self._error_count,
