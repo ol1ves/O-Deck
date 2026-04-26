@@ -3,6 +3,7 @@ import json
 from typing import Any
 
 from fastapi import WebSocket
+from starlette.websockets import WebSocketDisconnect
 
 
 class WSManager:
@@ -33,7 +34,7 @@ class WSManager:
         for client in clients:
             try:
                 await client.send_text(message)
-            except Exception:
+            except (WebSocketDisconnect, ConnectionError, OSError, RuntimeError):
                 dead_clients.append(client)
 
         if dead_clients:
