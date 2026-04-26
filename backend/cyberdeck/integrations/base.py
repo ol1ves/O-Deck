@@ -3,11 +3,12 @@ from __future__ import annotations
 import logging
 import time
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from cyberdeck.cache import Cache
-from cyberdeck.config import Settings
-from cyberdeck.ws import WSManager
+if TYPE_CHECKING:
+    from cyberdeck.cache import Cache
+    from cyberdeck.config import Settings
+    from cyberdeck.ws import WSManager
 
 logger = logging.getLogger(__name__)
 
