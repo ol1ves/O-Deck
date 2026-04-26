@@ -1,0 +1,102 @@
+device:
+  name: "O-Deck"
+  resolution:
+    width: 1024
+    height: 600
+  timezone: "America/New_York"
+  location:
+    lat: 40.6926
+    lon: -73.9869
+
+home:
+  layout: "default"
+  hero_tiles: ["now_playing"]
+  core_tiles: ["time", "weather", "transit", "calendar", "rss"]
+
+audio:
+  enabled: true
+  master_volume: 0.6
+  chimes:
+    pomodoro: true
+    weather_alert: true
+
+weather:
+  provider: "open-meteo"
+  alerts:
+    rain: true
+    snow: true
+    heat_spike_threshold_f: 90
+    cold_drop_threshold_f: 25
+    severe: true
+
+transit:
+  refresh_seconds: 30
+  primary_stations:
+    - station: "Jay St-MetroTech"
+      stop_id: "A41N"
+      lines: ["A", "C", "F", "R"]
+    - station: "DeKalb Av"
+      stop_id: "R30N"
+      lines: ["Q"]
+  secondary_stations:
+    - station: "14 St-Union Sq"
+      stop_id: "635S"
+      lines: ["4", "5", "6", "R", "Q"]
+    - station: "W 4 St-Wash Sq"
+      stop_id: "A32S"
+      lines: ["F", "A", "C"]
+  show_alerts: true
+
+calendar:
+  google:
+    calendar_ids: ["primary"]
+  notion:
+    todo_database_ids: []
+    join_strategy: "event_link"
+  view: "today_at_a_glance"
+
+spotify:
+  enabled: true
+
+github:
+  username: "<your-github-username>"
+  show: ["recent_commits", "open_prs", "assigned_issues"]
+
+rss:
+  refresh_seconds: 600
+  feeds:
+    - name: "TLDR"
+      url: "https://kill-the-newsletter.com/feeds/<your-id>.xml"
+    - name: "Hacker News"
+      url: "https://news.ycombinator.com/rss"
+  ticker:
+    enabled: true
+    speed: "medium"
+  headline_stack_size: 3
+
+photos:
+  source: "icloud_shared_album"
+  icloud_share_url: "https://www.icloud.com/sharedalbum/#..."
+  local_folder: "~/cyberdeck-photos"
+  rotation_seconds: 30
+
+pomodoro:
+  presets:
+    - name: "Classic"
+      work_min: 25
+      break_min: 5
+      cycles: 4
+      long_break_min: 15
+    - name: "Deep"
+      work_min: 50
+      break_min: 10
+      cycles: 3
+      long_break_min: 20
+
+doomscroll:
+  sources: ["rss"]
+  qr_open_on_phone: true
+
+showcase:
+  default_mode: "generative"
+  music_reactive_when_playing: true
