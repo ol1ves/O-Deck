@@ -69,15 +69,22 @@ class WeatherIntegration(Integration):
             resp.raise_for_status()
             raw = resp.json()
 
-        current = raw["current"]
-        daily = raw["daily"]
-        hourly_temps = raw["hourly"]["temperature_2m"]
+        current = _required_mapping(raw, "current")
+        daily = _required_mapping(raw, "daily")
+        hourly_data = _required_mapping(raw, "hourly")
+        hourly_temps = _required_value(hourly_data, "temperature_2m", "hourly.temperature_2m")
 
-        temp_c = current["temperature_2m"]
-        feels_c = current["apparent_temperature"]
-        code = int(current["weather_code"])
-        high_c = daily["temperature_2m_max"][0]
-        low_c = daily["temperature_2m_min"][0]
+        temp_c = _required_value(current, "temperature_2m", "current.temperature_2m")
+        feels_c = _required_value(current, "apparent_temperature", "current.apparent_temperature")
+        code_raw = _required_value(current, "weather_code", "current.weather_code")
+        try:
+            code = int(code_raw)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("Invalid weather payload: invalid 'current.weather_code'") from exc
+
+        high_c = _required_first(daily, "temperature_2m_max", "daily.temperature_2m_max")
+        low_c = _required_first(daily, "temperature_2m_min", "daily.temperature_2m_min")
+
 
         hourly = [{"h": str(i), "t": _c_to_f(t)} for i, t in enumerate(hourly_temps[:6])]
 
@@ -107,3 +114,25 @@ class WeatherIntegration(Integration):
             "hourly": hourly,
             "alerts": alerts,
         }
+
+
+def _required_mapping(payload: dict[str, Any], key: str) -> dict[str, Any]:
+    value = payload.get(key)
+    if value is None:
+        raise ValueError(f"Invalid weather payload: missing '{key}'")
+    if not isinstance(value, dict):
+        raise ValueError(f"Invalid weather payload: invalid '{key}'")
+    return value
+
+
+def _required_value(mapping: dict[str, Any], key: str, path: str) -> Any:
+    if key not in mapping:
+        raise ValueError(f"Invalid weather payload: missing '{path}'")
+    return mapping[key]
+
+
+def _required_first(mapping: dict[str, Any], key: str, path: str) -> Any:
+    value = _required_value(mapping, key, path)
+    if not isinstance(value, list) or not value:
+        raise ValueError(f"Invalid weather payload: missing '{path}[0]'")
+    return value[0]

@@ -1,7 +1,9 @@
 import httpx
 import pytest
 import respx
+import re
 from unittest.mock import AsyncMock, MagicMock
+from urllib.parse import parse_qs, urlparse
 
 from cyberdeck.cache import Cache
 from cyberdeck.integrations.weather import WeatherIntegration, _c_to_f, _wmo_desc
@@ -163,6 +165,83 @@ async def test_fetch_generates_heat_alert():
     result = await make_integration().fetch()
 
     assert any(a["type"] == "heat" for a in result["alerts"])
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_fetch_generates_snow_alert():
+    fixture = {**OPEN_METEO_FIXTURE, "current": {**OPEN_METEO_FIXTURE["current"], "weather_code": 73}}
+    respx.get(METEO_URL).mock(return_value=httpx.Response(200, json=fixture))
+
+    result = await make_integration().fetch()
+
+    assert any(a["type"] == "snow" for a in result["alerts"])
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_fetch_generates_cold_alert():
+    # -5C = 23F, below default threshold of 25F
+    fixture = {
+        **OPEN_METEO_FIXTURE,
+        "current": {**OPEN_METEO_FIXTURE["current"], "temperature_2m": -5.0, "weather_code": 0},
+    }
+    respx.get(METEO_URL).mock(return_value=httpx.Response(200, json=fixture))
+
+    result = await make_integration().fetch()
+
+    assert any(a["type"] == "cold" for a in result["alerts"])
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_fetch_suppresses_thunder_when_severe_disabled():
+    fixture = {**OPEN_METEO_FIXTURE, "current": {**OPEN_METEO_FIXTURE["current"], "weather_code": 95}}
+    respx.get(METEO_URL).mock(return_value=httpx.Response(200, json=fixture))
+
+    result = await make_integration(config=make_config(severe=False)).fetch()
+
+    assert not any(a["type"] == "thunder" for a in result["alerts"])
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("fixture", "expected_path"),
+    [
+        ({k: v for k, v in OPEN_METEO_FIXTURE.items() if k != "current"}, "current"),
+        ({k: v for k, v in OPEN_METEO_FIXTURE.items() if k != "daily"}, "daily"),
+        ({**OPEN_METEO_FIXTURE, "hourly": {}}, "hourly.temperature_2m"),
+        (
+            {**OPEN_METEO_FIXTURE, "daily": {**OPEN_METEO_FIXTURE["daily"], "temperature_2m_max": []}},
+            "daily.temperature_2m_max[0]",
+        ),
+        (
+            {**OPEN_METEO_FIXTURE, "daily": {**OPEN_METEO_FIXTURE["daily"], "temperature_2m_min": []}},
+            "daily.temperature_2m_min[0]",
+        ),
+    ],
+)
+@respx.mock
+async def test_fetch_raises_value_error_on_missing_payload_fields(fixture, expected_path):
+    respx.get(METEO_URL).mock(return_value=httpx.Response(200, json=fixture))
+
+    with pytest.raises(ValueError, match=re.escape(expected_path)):
+        await make_integration().fetch()
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_fetch_requests_required_query_fields():
+    route = respx.get(METEO_URL).mock(return_value=httpx.Response(200, json=OPEN_METEO_FIXTURE))
+
+    await make_integration().fetch()
+
+    assert route.called
+    request = route.calls[0].request
+    query = parse_qs(urlparse(str(request.url)).query)
+    assert query["current"] == ["temperature_2m,apparent_temperature,weather_code"]
+    assert query["daily"] == ["temperature_2m_max,temperature_2m_min"]
+    assert query["hourly"] == ["temperature_2m"]
 
 
 @pytest.mark.asyncio
