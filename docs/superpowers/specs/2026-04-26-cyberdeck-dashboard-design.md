@@ -466,25 +466,60 @@ A hidden diagnostics page (`/diagnostics`) surfaces per-integration status, last
 
 No Prometheus, no Grafana — one HTML page that's enough.
 
-## Workflow checkpoint: Claude Design handoff
+## Workflow checkpoint: Claude Design handoff (COMPLETE)
 
-After this spec is approved, work pauses for visual design.
+Visual design produced in Claude Design. Source-of-truth artifacts now live in repo:
 
-Oliver takes the locked content + structure to **Claude Design** (separate tool) and produces UI mockups for:
-- Home screen layout (core tiles + hero + dock placement)
-- Fullscreen app templates
-- Pomodoro running-state ambient UI
-- Showcase mode treatment (generative + music-reactive variants; resolves the "ambient vs. functional" tension flagged during brainstorming)
-- Visual identity / aesthetic (color, type, motion)
+- **`docs/design.md`** — design baseline (design intent, tokens, motion, IA, app patterns).
+- **`design/screens/system.jsx`** — token system + shared shell primitives (`ODScreen`, `ODStatusBar`, `ODDock`, `SectionLabel`).
+- **`design/screens/notes.jsx`** — shared mock data + helpers (`MTAPill`, `WeatherIcon`, `EQBars`, `Ticker`, `AlbumArt`).
+- **`design/screens/variation-c3.jsx`** — home screen reference (C v3 "Atelier"): `ScreenCv3`, `DriftOrbs`, `RainOverlay`, `Grain`, `Sparkline`, `CommitHeartbeat`, `BlockBar`.
+- **`design/screens/apps-1.jsx`** + **`apps-2.jsx`** — fullscreen app reference layouts (Pomodoro, Transit detail, Calendar, GitHub, Doomscroll, Photo, Showcase, Subway map, Diagnostics).
+- **`design/O-Deck Home.html`** — runnable canvas of all variants.
 
-Concrete UI returns from Claude Design as HTML/CSS or visual references. Those get incorporated into the implementation plan, **then** writing-plans + implementation begin. No code is written before this checkpoint.
+### Locked design decisions
 
-## Open decisions deferred to Claude Design
+**Direction:** Variation C v3 "Atelier" — editorial cyberdeck, asymmetric, time-as-hero, slow blurred orb motion.
 
-- Whether Pomodoro deserves a hero slot on home (currently launcher-only). Hero slot is configurable, so this is a config flip.
-- Final treatment for Showcase mode — full-bleed visuals vs. dimmed-with-info-on-edges hybrid. Spec defaults to full-bleed; Claude Design may produce something better.
-- Visual identity overall (color, type, motion grammar).
-- Specific layout grid for home tiles at the detected resolution.
+**Resolution:** 1024×600 (primary target). 800×480 supported via responsive collapse.
+
+**Palette (from `system.jsx`):**
+- `bg #15130f`, `bgRaised rgba(31,28,24,0.78)`, `bgSolid #1f1c18`
+- `ink #f0e8d6`, `inkDim 55%`, `inkSub 32%`
+- `accentSand #e6c89b` (primary emphasis), `accentSage #a8c19a` (live/healthy), `accentRose #d49a8e` (delay/warning), `accentLav #a08fb3` (music)
+- `line rgba(240,232,214,0.08)`
+
+**Type:** Inter (large numerals, headings, body), IBM Plex Mono (status, metadata, dock).
+
+**Hero slot:** Now Playing only (right-side vertical strip, smaller art, type-forward). Pomodoro stays in launcher dock, fullscreen-only.
+
+**Motion modes (driven by integration state):**
+- `music` ← Spotify playing
+- `rain` ← weather condition rain
+- `thunder` ← weather alert thunder/storm
+- `calm` ← default
+
+Each mode swaps the orb palette and adds an overlay (rain streaks for `rain`/`thunder`, occasional flash for `thunder`, beat-pulsed orb radius for `music`).
+
+**Showcase mode:** full-bleed generative visuals, no info overlay, tap-to-return. (Tension resolved.)
+
+**Subway map:** abstract live treatment with animated train markers; not a literal MTA map clone.
+
+**Doomscroll:** feed list + selected story detail; QR handoff to phone is the primary read action.
+
+### Implementation guardrails from design
+
+- Token system lifts from `system.jsx` → CSS variables / Tailwind theme.
+- Reusable primitives become Svelte components: `<SectionLabel>`, `<ODStatusBar>`, `<ODDock>`, `<Ticker>`, `<MTAPill>`, `<Sparkline>`, `<CommitHeartbeat>`, `<AlbumArt>`, `<EQBars>`, `<BlockBar>`, `<WeatherIcon>`.
+- Background motion via canvas (`<DriftOrbs>` + optional `<RainOverlay>` + `<Grain>` overlay).
+- Performance: low orb count (≤8), blur via CSS `filter: blur()` on the canvas (cheap), no per-frame layout, prefer `transform`/`opacity`. Cap RAF where possible.
+- Diagnostics screen drops the ambient layer (clarity > mood).
+
+## Open items (from design, deferred to on-device pass)
+
+- Final intensity envelope for `<DriftOrbs>` on real Pi hardware (may need to dial down particle/blur cost).
+- Keep/cut ASCII system meter in home status line (currently optional).
+- Final spacing/tightness after first on-device readability check at 4 ft.
 
 ## Success criteria for v1
 
