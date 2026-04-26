@@ -1,0 +1,22 @@
+# Worktrees
+.worktrees/
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+.pytest_cache/
+
+# Node
+node_modules/
+frontend/.svelte-kit/
+frontend/build/
+
+# Secrets / config (real values, not examples)
+.env
+*.local
+
+# Editor
+.DS_Store
