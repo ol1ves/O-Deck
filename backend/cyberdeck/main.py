@@ -11,43 +11,16 @@ from fastapi.staticfiles import StaticFiles
 from starlette.websockets import WebSocketDisconnect
 
 from cyberdeck.cache import Cache
-from cyberdeck.config import Settings, load_config
-from cyberdeck.integrations.base import Integration
+from cyberdeck.config import load_config
+from cyberdeck.integrations.weather import WeatherIntegration
 from cyberdeck.scheduler import IntegrationScheduler
 from cyberdeck.ws import WSManager
 
-APP_VERSION = "0.1.0"
-
-
-def setup_logging() -> None:
-    logging.basicConfig(
-        level=logging.INFO,
-        format=(
-            "%(asctime)s level=%(levelname)s logger=%(name)s "
-            "event=%(message)s"
-        ),
-    )
-
-
-setup_logging()
-logger = logging.getLogger(__name__)
-
-
-class WeatherIntegration(Integration):
-    name = "weather"
-
-    async def fetch(self) -> dict[str, Any]:
-        location = self.config.app.device.location
-        return {
-            "provider": self.config.app.weather.provider,
-            "lat": location.lat,
-            "lon": location.lon,
-            "conditions": "unknown",
-            "temperature_f": None,
-        }
-
-    def event_name(self) -> str:
-        return "weather:update"
+logging.basicConfig(
+    level=logging.INFO,
+    format='{"t":"%(asctime)s","lvl":"%(levelname)s","name":"%(name)s","msg":%(message)r}',
+)
+logger = logging.getLogger("cyberdeck")
 
 
 settings = load_config()
@@ -57,63 +30,70 @@ scheduler = IntegrationScheduler()
 
 
 @asynccontextmanager
-async def lifespan(_: FastAPI):
-    logger.info("starting application lifespan")
+async def lifespan(app: FastAPI):
     cache.load_from_db()
-    scheduler.register(WeatherIntegration(cache, ws_manager, settings), interval_seconds=600)
+    existing_integration_names = {integration.name for integration in scheduler._integrations}
+    if "weather" not in existing_integration_names:
+        weather = WeatherIntegration(cache=cache, ws_manager=ws_manager, config=settings)
+        scheduler.register(weather, interval_seconds=600)
+
     await scheduler.start()
-    try:
-        yield
-    finally:
-        scheduler.shutdown()
-        logger.info("stopped application lifespan")
+    logger.info("O-Deck backend online")
+    yield
+    scheduler.shutdown()
+    logger.info("O-Deck backend shutdown complete")
 
 
-app = FastAPI(
-    title="Cyberdeck API",
-    version=APP_VERSION,
-    lifespan=lifespan,
-)
+app = FastAPI(title="O-Deck", version="0.1.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 
 @app.get("/api/state")
-async def get_state() -> dict[str, Any]:
-    return {"weather": cache.get("weather")}
+async def api_state() -> dict[str, Any]:
+    """Full cached state for frontend initial hydration."""
+    return {
+        "weather": cache.get("weather"),
+    }
 
 
 @app.get("/api/config")
-async def get_config() -> dict[str, Any]:
+async def api_config() -> dict[str, Any]:
+    """Safe (no secrets) device + home config subset."""
+    cfg = settings.app
     return {
-        "device": settings.app.device.model_dump(),
-        "home": settings.app.home.model_dump(),
+        "device": cfg.device.model_dump(),
+        "home": cfg.home.model_dump(),
     }
 
 
 @app.get("/api/status")
-async def get_status() -> dict[str, Any]:
-    integrations = [integration.status for integration in getattr(scheduler, "_integrations", [])]
-    return {"ws_clients": ws_manager.client_count, "integrations": integrations}
+async def api_status() -> dict[str, Any]:
+    """Diagnostics: WS client count + integration statuses."""
+    return {
+        "ws_clients": ws_manager.client_count,
+        "integrations": [i.status for i in scheduler._integrations],
+    }
 
 
 @app.websocket("/ws")
-async def websocket_endpoint(ws: WebSocket) -> None:
+async def ws_endpoint(ws: WebSocket):
     await ws_manager.connect(ws)
+    logger.info("ws connect; clients=%d", ws_manager.client_count)
     try:
         while True:
-            await ws.receive_text()
+            await ws.receive_text()  # keep-alive; client sends pings
     except WebSocketDisconnect:
-        logger.info("websocket disconnected")
+        pass
     finally:
         await ws_manager.disconnect(ws)
+        logger.info("ws disconnect; clients=%d", ws_manager.client_count)
 
 
-frontend_build = Path(__file__).resolve().parents[2] / "frontend" / "build"
-if frontend_build.exists():
-    app.mount("/", StaticFiles(directory=str(frontend_build), html=True), name="frontend")
+_static_dir = Path(__file__).parent.parent.parent / "frontend" / "build"
+if _static_dir.exists():
+    app.mount("/", StaticFiles(directory=str(_static_dir), html=True), name="static")
