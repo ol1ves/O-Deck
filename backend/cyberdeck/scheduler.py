@@ -25,6 +25,7 @@ class IntegrationScheduler:
             replace_existing=True,
             misfire_grace_time=30,
         )
+        logger.info("registered integration %s every %ds", integration.name, interval_seconds)
 
     async def start(self) -> None:
         self._scheduler.start()
