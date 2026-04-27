@@ -136,13 +136,14 @@ class CalendarIntegration(Integration):
 
         loop = asyncio.get_running_loop()
         token = await loop.run_in_executor(None, _load_google_token, token_path, creds_path)
-        today = date.today().isoformat()
+        timezone = self.config.app.device.timezone
+        today = datetime.now(ZoneInfo(timezone)).date().isoformat()
 
         raw_events = await _fetch_google_events(
             token,
             list(self.config.app.calendar.google.calendar_ids),
             today,
-            self.config.app.device.timezone,
+            timezone,
         )
         events = [_parse_google_event(raw) for raw in raw_events]
 

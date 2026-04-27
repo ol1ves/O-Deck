@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime as real_datetime
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
@@ -206,6 +207,37 @@ def test_load_google_token_raises_clear_error_for_expired_token_without_refresh(
 
 
 @pytest.mark.asyncio
+async def test_fetch_derives_today_from_configured_timezone(monkeypatch, tmp_path):
+    token_path = tmp_path / "token.json"
+    creds_path = tmp_path / "credentials.json"
+    token_path.write_text("{}")
+    creds_path.write_text("{}")
+    token = SimpleNamespace(token="google-token")
+
+    class FrozenDateTime:
+        @classmethod
+        def now(cls, tz):
+            assert tz.key == "America/New_York"
+            return real_datetime(2026, 4, 27, 0, 30, tzinfo=tz)
+
+    load_token = MagicMock(return_value=token)
+    fetch_google = AsyncMock(return_value=[])
+    loop = MagicMock()
+    loop.run_in_executor = AsyncMock(return_value=token)
+
+    monkeypatch.setattr("cyberdeck.integrations.calendar._load_google_token", load_token)
+    monkeypatch.setattr("cyberdeck.integrations.calendar._fetch_google_events", fetch_google)
+    monkeypatch.setattr("cyberdeck.integrations.calendar._fetch_notion_todos", AsyncMock(return_value=[]))
+    monkeypatch.setattr("cyberdeck.integrations.calendar.asyncio.get_running_loop", lambda: loop)
+    monkeypatch.setattr("cyberdeck.integrations.calendar.datetime", FrozenDateTime)
+    monkeypatch.setattr("cyberdeck.integrations.calendar.date", MagicMock(today=lambda: real_datetime(2026, 4, 26).date()))
+
+    await make_integration(make_config(token_path=token_path, creds_path=creds_path)).fetch()
+
+    fetch_google.assert_awaited_once_with(token, ["primary"], "2026-04-27", "America/New_York")
+
+
+@pytest.mark.asyncio
 async def test_fetch_loads_token_in_executor_and_returns_joined_events(monkeypatch, tmp_path):
     token_path = tmp_path / "token.json"
     creds_path = tmp_path / "credentials.json"
@@ -241,10 +273,18 @@ async def test_fetch_loads_token_in_executor_and_returns_joined_events(monkeypat
     loop = MagicMock()
     loop.run_in_executor = run_in_executor
 
+    class FrozenDateTime:
+        @classmethod
+        def now(cls, tz):
+            return real_datetime(2026, 4, 26, 12, 0, tzinfo=tz)
+
+        fromisoformat = staticmethod(real_datetime.fromisoformat)
+
     monkeypatch.setattr("cyberdeck.integrations.calendar._load_google_token", load_token)
     monkeypatch.setattr("cyberdeck.integrations.calendar._fetch_google_events", fetch_google)
     monkeypatch.setattr("cyberdeck.integrations.calendar._fetch_notion_todos", fetch_notion)
     monkeypatch.setattr("cyberdeck.integrations.calendar.asyncio.get_running_loop", lambda: loop)
+    monkeypatch.setattr("cyberdeck.integrations.calendar.datetime", FrozenDateTime)
     monkeypatch.setattr("cyberdeck.integrations.calendar.date", MagicMock(today=lambda: SimpleNamespace(isoformat=lambda: "2026-04-26")))
 
     result = await make_integration(
