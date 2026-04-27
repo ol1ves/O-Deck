@@ -1,0 +1,35 @@
+# systemd/cyberdeck-kiosk.service
+[Unit]
+Description=O-Deck Kiosk (Chromium fullscreen)
+After=graphical-session.target cyberdeck-backend.service
+Wants=cyberdeck-backend.service
+BindsTo=graphical-session.target
+
+[Service]
+Type=simple
+Environment=DISPLAY=:0
+Environment=WAYLAND_DISPLAY=wayland-1
+# Wait for backend to be ready
+ExecStartPre=/bin/bash -c 'for i in $(seq 1 30); do curl -sf http://localhost:8080/api/state && break; sleep 1; done'
+ExecStart=/usr/bin/chromium-browser \
+  --kiosk \
+  --noerrdialogs \
+  --disable-infobars \
+  --no-first-run \
+  --disable-session-crashed-bubble \
+  --disable-restore-session-state \
+  --enable-features=OverlayScrollbar \
+  --touch-events=enabled \
+  --ozone-platform=wayland \
+  --window-size=1024,600 \
+  --disable-pinch \
+  --overscroll-history-navigation=0 \
+  http://localhost:8080
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=cyberdeck-kiosk
+
+[Install]
+WantedBy=graphical-session.target
