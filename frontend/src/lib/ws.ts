@@ -75,6 +75,20 @@ export function tapTheme(): void {
   }, THEME_OVERRIDE_DECAY_MS);
 }
 
+const WEATHER_WINDOW_DECAY_MS = 30_000;
+let weatherWindowTimer: ReturnType<typeof setTimeout> | null = null;
+
+export function tapWeatherWindow(): void {
+  appStore.update((state) => ({
+    ...state,
+    weatherWindow: state.weatherWindow === '24h' ? '6h' : '24h'
+  }));
+  if (weatherWindowTimer) clearTimeout(weatherWindowTimer);
+  weatherWindowTimer = setTimeout(() => {
+    appStore.update((state) => ({ ...state, weatherWindow: '24h' }));
+  }, WEATHER_WINDOW_DECAY_MS);
+}
+
 export function applyEvent(type: string, data: unknown): void {
   appStore.update((state) => {
     const next: AppState = { ...state };

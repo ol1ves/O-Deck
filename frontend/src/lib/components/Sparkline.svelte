@@ -9,11 +9,15 @@
     color = 'currentColor',
     width = 120,
     height = 28,
+    nowLabel = '',
+    endLabel = '',
   }: {
     points?: SparkPoint[];
     color?: string;
     width?: number;
     height?: number;
+    nowLabel?: string;
+    endLabel?: string;
   } = $props();
 
   const path = $derived.by(() => {
@@ -44,6 +48,23 @@
   aria-hidden="true"
 >
   <path d={path} stroke={color} stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+  {#if nowLabel}
+    <text x="0" y={height - 1} font-size="8" fill="var(--ink-dim)" font-family="var(--font-mono)">
+      {nowLabel}
+    </text>
+  {/if}
+  {#if endLabel}
+    <text
+      x={width}
+      y={height - 1}
+      text-anchor="end"
+      font-size="8"
+      fill="var(--ink-dim)"
+      font-family="var(--font-mono)"
+    >
+      {endLabel}
+    </text>
+  {/if}
 </svg>
 
 <style>

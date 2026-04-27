@@ -10,7 +10,7 @@
   import Ticker from '$lib/components/Ticker.svelte';
   import WeatherIcon from '$lib/components/WeatherIcon.svelte';
   import { format_uptime_label } from '$lib/format';
-  import { appStore, tapTheme } from '$lib/ws';
+  import { appStore, tapTheme, tapWeatherWindow } from '$lib/ws';
 
   const lineColors: Record<string, string> = {
     A: '#0039A6',
@@ -87,6 +87,11 @@
   const callsign = $derived(device?.callsign ? `/${device.callsign}` : '');
   const lanLabel = $derived(device?.lan_ip ?? device?.hostname ?? '...');
   const weather = $derived(state.weather);
+  const weatherWindow = $derived(state.weatherWindow);
+  const weatherSeries = $derived(
+    weather ? (weatherWindow === '6h' ? weather.hourly.slice(0, 6) : weather.hourly.slice(0, 24)) : []
+  );
+  const weatherEndLabel = $derived(weatherWindow === '6h' ? '+6H' : 'TODAY');
   const transit = $derived(state.transit);
   const spotify = $derived(state.spotify);
   const calendar = $derived(state.calendar);
@@ -159,9 +164,21 @@
             <div>{weather.cond.toLowerCase()}</div>
             <div class="sub">H{Math.round(weather.highF)}° L{Math.round(weather.lowF)}° · feels {Math.round(weather.feelsLikeF)}°</div>
           </div>
-          <div class="weather-sparkline">
-            <Sparkline points={weather.hourly} color="var(--sage)" width={140} height={30} />
-          </div>
+          <button
+            type="button"
+            class="weather-sparkline-btn"
+            onclick={tapWeatherWindow}
+            aria-label="toggle weather window"
+          >
+            <Sparkline
+              points={weatherSeries}
+              color="var(--sage)"
+              width={140}
+              height={36}
+              nowLabel="NOW"
+              endLabel={weatherEndLabel}
+            />
+          </button>
         {:else}
           <span class="loading">weather loading...</span>
         {/if}
@@ -488,9 +505,12 @@
     line-height: 1.5;
   }
 
-  .weather-sparkline {
+  .weather-sparkline-btn {
     margin-left: auto;
-    padding-bottom: 4px;
+    padding: 0 0 4px;
+    border: 0;
+    background: none;
+    cursor: pointer;
   }
 
   .now-playing-rail {
