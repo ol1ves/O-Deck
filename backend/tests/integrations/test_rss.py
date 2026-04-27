@@ -35,6 +35,34 @@ def parsed_feed(*entries: dict) -> MagicMock:
     return MagicMock(entries=list(entries))
 
 
+def patch_feed_fetch(monkeypatch, payloads: dict[str, MagicMock], parse=None) -> None:
+    class FakeResponse:
+        def __init__(self, content: bytes) -> None:
+            self.content = content
+
+        def raise_for_status(self) -> None:
+            pass
+
+    class FakeClient:
+        def __init__(self, *, timeout: float) -> None:
+            self.timeout = timeout
+
+        async def __aenter__(self) -> "FakeClient":
+            return self
+
+        async def __aexit__(self, *args: object) -> None:
+            pass
+
+        async def get(self, url: str) -> FakeResponse:
+            return FakeResponse(url.encode())
+
+    def parse_feed(content: bytes) -> MagicMock:
+        return payloads[content.decode()]
+
+    monkeypatch.setattr("cyberdeck.integrations.rss.httpx.AsyncClient", FakeClient)
+    monkeypatch.setattr("cyberdeck.integrations.rss.feedparser.parse", parse or parse_feed)
+
+
 def entry(
     *,
     title: str,
@@ -52,6 +80,50 @@ def entry(
     if id is not None:
         data["id"] = id
     return data
+
+
+@pytest.mark.asyncio
+async def test_fetch_uses_bounded_http_client_and_parses_response_bytes(monkeypatch):
+    calls: dict[str, object] = {}
+    feed = RSSFeedConfig(name="Tech", url="https://example.com/tech.xml")
+
+    class FakeResponse:
+        content = b"<rss>feed bytes</rss>"
+
+        def raise_for_status(self) -> None:
+            calls["raised"] = True
+
+    class FakeClient:
+        def __init__(self, *, timeout: float) -> None:
+            calls["timeout"] = timeout
+
+        async def __aenter__(self) -> "FakeClient":
+            return self
+
+        async def __aexit__(self, *args: object) -> None:
+            pass
+
+        async def get(self, url: str) -> FakeResponse:
+            calls["url"] = url
+            return FakeResponse()
+
+    def parse_feed(content: bytes) -> MagicMock:
+        calls["parsed_content"] = content
+        assert content == b"<rss>feed bytes</rss>"
+        return parsed_feed(entry(id="1", title="One", link="https://example.com/1"))
+
+    monkeypatch.setattr("cyberdeck.integrations.rss.httpx.AsyncClient", FakeClient)
+    monkeypatch.setattr("cyberdeck.integrations.rss.feedparser.parse", parse_feed)
+
+    result = await make_integration(config=make_config(feeds=[feed])).fetch()
+
+    assert calls == {
+        "timeout": 15.0,
+        "url": "https://example.com/tech.xml",
+        "raised": True,
+        "parsed_content": b"<rss>feed bytes</rss>",
+    }
+    assert result["ticker"] == ["TECH · One"]
 
 
 def test_integration_event_contract():
@@ -114,7 +186,7 @@ async def test_fetch_maps_entries_from_multiple_feeds(monkeypatch):
         ),
     }
 
-    monkeypatch.setattr("cyberdeck.integrations.rss.feedparser.parse", lambda url: payloads[url])
+    patch_feed_fetch(monkeypatch, payloads)
 
     result = await make_integration(config=make_config(feeds=feeds)).fetch()
 
@@ -153,7 +225,7 @@ async def test_fetch_dedupes_across_feeds_and_builds_ticker(monkeypatch):
             entry(id="unique", title="Second title", link="https://example.com/c"),
         ),
     }
-    monkeypatch.setattr("cyberdeck.integrations.rss.feedparser.parse", lambda url: payloads[url])
+    patch_feed_fetch(monkeypatch, payloads)
 
     result = await make_integration(config=make_config(feeds=feeds)).fetch()
 
@@ -164,13 +236,15 @@ async def test_fetch_dedupes_across_feeds_and_builds_ticker(monkeypatch):
 @pytest.mark.asyncio
 async def test_fetch_limits_headlines_to_configured_stack_size(monkeypatch):
     feed = RSSFeedConfig(name="Tech", url="https://example.com/tech.xml")
-    monkeypatch.setattr(
-        "cyberdeck.integrations.rss.feedparser.parse",
-        lambda url: parsed_feed(
-            entry(id="1", title="One", link="https://example.com/1"),
-            entry(id="2", title="Two", link="https://example.com/2"),
-            entry(id="3", title="Three", link="https://example.com/3"),
-        ),
+    patch_feed_fetch(
+        monkeypatch,
+        {
+            "https://example.com/tech.xml": parsed_feed(
+                entry(id="1", title="One", link="https://example.com/1"),
+                entry(id="2", title="Two", link="https://example.com/2"),
+                entry(id="3", title="Three", link="https://example.com/3"),
+            )
+        },
     )
 
     result = await make_integration(
@@ -186,14 +260,16 @@ async def test_fetch_limits_headlines_to_configured_stack_size(monkeypatch):
 @pytest.mark.asyncio
 async def test_fetch_limits_ticker_to_twenty_items(monkeypatch):
     feed = RSSFeedConfig(name="Tech", url="https://example.com/tech.xml")
-    monkeypatch.setattr(
-        "cyberdeck.integrations.rss.feedparser.parse",
-        lambda url: parsed_feed(
-            *[
-                entry(id=str(i), title=f"Item {i}", link=f"https://example.com/{i}")
-                for i in range(25)
-            ]
-        ),
+    patch_feed_fetch(
+        monkeypatch,
+        {
+            "https://example.com/tech.xml": parsed_feed(
+                *[
+                    entry(id=str(i), title=f"Item {i}", link=f"https://example.com/{i}")
+                    for i in range(25)
+                ]
+            )
+        },
     )
 
     result = await make_integration(config=make_config(feeds=[feed])).fetch()
@@ -210,7 +286,7 @@ async def test_run_swallows_feedparser_error_and_increments_error_count(monkeypa
     def parse_raises(url: str) -> None:
         raise RuntimeError(f"boom {url}")
 
-    monkeypatch.setattr("cyberdeck.integrations.rss.feedparser.parse", parse_raises)
+    patch_feed_fetch(monkeypatch, {"https://example.com/tech.xml": parsed_feed()}, parse=parse_raises)
     integration = make_integration(
         config=make_config(feeds=[feed]),
         cache=Cache(db_path=tmp_path / "c.db"),
@@ -225,9 +301,13 @@ async def test_run_swallows_feedparser_error_and_increments_error_count(monkeypa
 @pytest.mark.asyncio
 async def test_run_writes_cache_and_broadcasts_rss_update(monkeypatch, tmp_path):
     feed = RSSFeedConfig(name="Tech", url="https://example.com/tech.xml")
-    monkeypatch.setattr(
-        "cyberdeck.integrations.rss.feedparser.parse",
-        lambda url: parsed_feed(entry(id="1", title="One", link="https://example.com/1")),
+    patch_feed_fetch(
+        monkeypatch,
+        {
+            "https://example.com/tech.xml": parsed_feed(
+                entry(id="1", title="One", link="https://example.com/1")
+            )
+        },
     )
     cache = Cache(db_path=tmp_path / "c.db")
     ws = MagicMock()

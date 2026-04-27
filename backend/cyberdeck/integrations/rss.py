@@ -6,6 +6,7 @@ import time
 from typing import Any
 
 import feedparser
+import httpx
 
 from cyberdeck.integrations.base import Integration
 
@@ -51,8 +52,13 @@ class RSSIntegration(Integration):
         }
 
     async def _parse_feed(self, url: str) -> Any:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            response = await client.get(url)
+            response.raise_for_status()
+            content = response.content
+
         loop = asyncio.get_running_loop()
-        return await loop.run_in_executor(None, feedparser.parse, url)
+        return await loop.run_in_executor(None, feedparser.parse, content)
 
 
 def _dedupe(items: list[dict[str, str]]) -> list[dict[str, str]]:
