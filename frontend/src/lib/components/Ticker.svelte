@@ -11,7 +11,6 @@
     fontSize?: number;
   } = $props();
 
-  const sequence = $derived([...items, ...items]);
 </script>
 
 <div
@@ -21,9 +20,16 @@
   style:--ticker-size={`${fontSize}px`}
 >
   <div class="ticker-track">
-    {#each sequence as item}
-      <span>{item}</span>
-    {/each}
+    <div class="ticker-group">
+      {#each items as item}
+        <span>{item}</span>
+      {/each}
+    </div>
+    <div class="ticker-group" aria-hidden="true">
+      {#each items as item}
+        <span>{item}</span>
+      {/each}
+    </div>
   </div>
 </div>
 
@@ -44,11 +50,28 @@
   .ticker :global(.ticker-track) {
     display: inline-flex;
     min-width: max-content;
-    gap: 24px;
+    animation: ticker-loop 24s linear infinite;
     will-change: transform;
   }
 
-  .ticker span {
+  .ticker-group {
+    display: inline-flex;
     flex: 0 0 auto;
+    gap: 24px;
+    padding-right: 24px;
+  }
+
+  .ticker-group span {
+    flex: 0 0 auto;
+  }
+
+  @keyframes ticker-loop {
+    from {
+      transform: translateX(0);
+    }
+
+    to {
+      transform: translateX(-50%);
+    }
   }
 </style>
