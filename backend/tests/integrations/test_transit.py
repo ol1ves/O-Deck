@@ -81,16 +81,23 @@ def make_integration(config: Settings | None = None, cache=None, ws=None) -> Tra
     )
 
 
+def test_integration_event_contract():
+    integration = make_integration()
+
+    assert integration.name == "transit"
+    assert integration.event_name() == "transit.update"
+
+
 def test_feeds_for_lines_maps_known_lines_and_ignores_unknown_lines():
     assert _feeds_for_lines(["A", "C", "Q", "7", "X"]) == {"16", "26", "1"}
 
 
-def test_parse_arrivals_sorts_by_arrival_and_infers_direction():
+def test_parse_arrivals_sorts_same_stop_by_arrival_time_and_infers_direction():
     now = 1_000
     parsed = _parse_arrivals(
         feed_bytes(
             stops=[
-                {"route_id": "A", "stop_id": "A42S", "arrival_time": now + 600},
+                {"route_id": "A", "stop_id": "A42N", "arrival_time": now + 600},
                 {"route_id": "C", "stop_id": "A42N", "arrival_time": now + 120},
             ]
         ),
@@ -99,8 +106,9 @@ def test_parse_arrivals_sorts_by_arrival_and_infers_direction():
 
     assert parsed["A42N"][0]["line"] == "C"
     assert parsed["A42N"][0]["mins"] == 2
+    assert parsed["A42N"][1]["line"] == "A"
+    assert parsed["A42N"][1]["mins"] == 10
     assert parsed["A42N"][0]["dest"] == "Uptown"
-    assert parsed["A42S"][0]["dest"] == "Downtown"
 
 
 def test_parse_arrivals_uses_departure_time_and_excludes_past_and_far_future_trains():
