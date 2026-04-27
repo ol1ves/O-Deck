@@ -1,4 +1,4 @@
-import type { AppState } from './types';
+import type { AppState, DeviceInfo, IntegrationStatus } from './types';
 import { appStore, deriveMotionMode } from './ws';
 
 const BASE = '';
@@ -30,6 +30,26 @@ export async function fetchInitialState(): Promise<void> {
     next.motionMode = deriveMotionMode(next);
     return next;
   });
+}
+
+export async function fetchStatus(): Promise<void> {
+  try {
+    const r = await fetch(`${BASE}/api/status`);
+    if (!r.ok) return;
+    const body = (await r.json()) as {
+      device: DeviceInfo;
+      integrations: IntegrationStatus[];
+    };
+    appStore.update((current) => ({
+      ...current,
+      device: body.device,
+      integrationStatus: body.integrations,
+      uptimeOriginSeconds: body.device.uptime_seconds,
+      uptimePolledAt: Date.now()
+    }));
+  } catch {
+    // status is best-effort; failures are silent
+  }
 }
 
 async function fetchConfigBestEffort(): Promise<void> {

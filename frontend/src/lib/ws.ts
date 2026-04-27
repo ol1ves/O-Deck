@@ -10,6 +10,12 @@ const initialState: AppState = {
   rss: null,
   photos: null,
   pomodoro: null,
+  device: null,
+  integrationStatus: [],
+  uptimeOriginSeconds: 0,
+  uptimePolledAt: Date.now(),
+  themeOverride: null,
+  weatherWindow: '24h',
   connected: false,
   motionMode: 'calm'
 };
