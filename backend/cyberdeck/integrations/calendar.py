@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, time, timedelta
 from pathlib import Path
 from typing import Any
 from urllib.parse import quote
+from zoneinfo import ZoneInfo
 
 import httpx
 from google.auth.transport.requests import Request
@@ -27,7 +28,9 @@ def _load_google_token(token_path: Path, creds_path: Path) -> Credentials:
         raise FileNotFoundError(token_path)
 
     creds = Credentials.from_authorized_user_file(str(token_path), _GOOGLE_SCOPES)
-    if creds.expired and creds.refresh_token:
+    if creds.expired:
+        if not creds.refresh_token:
+            raise RuntimeError("expired Google Calendar token has no refresh token")
         creds.refresh(Request())
         token_path.write_text(creds.to_json())
     return creds
@@ -37,13 +40,16 @@ async def _fetch_google_events(
     token: Credentials,
     calendar_ids: list[str],
     date_str: str,
+    timezone: str,
 ) -> list[dict[str, Any]]:
-    start = date.fromisoformat(date_str)
+    start_date = date.fromisoformat(date_str)
+    tz = ZoneInfo(timezone)
+    start = datetime.combine(start_date, time.min, tzinfo=tz)
     end = start + timedelta(days=1)
     headers = {"Authorization": f"Bearer {token.token}"}
     params = {
-        "timeMin": f"{start.isoformat()}T00:00:00Z",
-        "timeMax": f"{end.isoformat()}T00:00:00Z",
+        "timeMin": start.isoformat(),
+        "timeMax": end.isoformat(),
         "singleEvents": "true",
         "orderBy": "startTime",
     }
@@ -72,12 +78,21 @@ async def _fetch_notion_todos(token: str, database_ids: list[str]) -> list[dict[
     async with httpx.AsyncClient(timeout=_HTTP_TIMEOUT) as client:
         for database_id in database_ids:
             url = _NOTION_DATABASE_QUERY_URL.format(database_id=quote(database_id, safe=""))
-            resp = await client.post(url, headers=headers, json={})
-            resp.raise_for_status()
-            payload = resp.json()
-            results = payload.get("results", [])
-            if isinstance(results, list):
-                todos.extend(item for item in results if isinstance(item, dict))
+            cursor: str | None = None
+            while True:
+                body = {"start_cursor": cursor} if cursor else {}
+                resp = await client.post(url, headers=headers, json=body)
+                resp.raise_for_status()
+                payload = resp.json()
+                results = payload.get("results", [])
+                if isinstance(results, list):
+                    todos.extend(item for item in results if isinstance(item, dict))
+                if not payload.get("has_more"):
+                    break
+                next_cursor = payload.get("next_cursor")
+                cursor = next_cursor if isinstance(next_cursor, str) and next_cursor else None
+                if cursor is None:
+                    break
     return todos
 
 
@@ -127,6 +142,7 @@ class CalendarIntegration(Integration):
             token,
             list(self.config.app.calendar.google.calendar_ids),
             today,
+            self.config.app.device.timezone,
         )
         events = [_parse_google_event(raw) for raw in raw_events]
 

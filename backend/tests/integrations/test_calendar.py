@@ -3,16 +3,25 @@ from __future__ import annotations
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
+from urllib.parse import parse_qs, urlparse
 
+import httpx
 import pytest
+import respx
 
 from cyberdeck.cache import Cache
 from cyberdeck.integrations.calendar import (
     CalendarIntegration,
+    _fetch_google_events,
+    _fetch_notion_todos,
     _join_events,
+    _load_google_token,
     _parse_google_event,
 )
 from cyberdeck.ws import WSManager
+
+GOOGLE_EVENTS_URL = "https://www.googleapis.com/calendar/v3/calendars/primary/events"
+NOTION_QUERY_URL = "https://api.notion.com/v1/databases/todo-db/query"
 
 
 def make_config(
@@ -27,6 +36,7 @@ def make_config(
     cfg.google_calendar_token_path = token_path
     cfg.google_calendar_credentials_path = creds_path
     cfg.notion_token = notion_token
+    cfg.app.device.timezone = "America/New_York"
     cfg.app.calendar.google.calendar_ids = calendar_ids or ["primary"]
     cfg.app.calendar.notion.todo_database_ids = database_ids or []
     return cfg
@@ -131,6 +141,71 @@ def test_join_events_matches_notion_todo_by_plain_url_and_title_fallback():
 
 
 @pytest.mark.asyncio
+@respx.mock
+async def test_fetch_google_events_uses_configured_timezone_day_window():
+    route = respx.get(GOOGLE_EVENTS_URL).mock(return_value=httpx.Response(200, json={"items": []}))
+
+    await _fetch_google_events(
+        SimpleNamespace(token="google-token"),
+        ["primary"],
+        "2026-04-26",
+        "America/New_York",
+    )
+
+    query = parse_qs(urlparse(str(route.calls[0].request.url)).query)
+    assert query["timeMin"] == ["2026-04-26T00:00:00-04:00"]
+    assert query["timeMax"] == ["2026-04-27T00:00:00-04:00"]
+    assert query["singleEvents"] == ["true"]
+    assert query["orderBy"] == ["startTime"]
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_fetch_notion_todos_follows_pagination_cursor():
+    route = respx.post(NOTION_QUERY_URL).mock(
+        side_effect=[
+            httpx.Response(
+                200,
+                json={
+                    "results": [{"id": "page-1"}],
+                    "has_more": True,
+                    "next_cursor": "cursor-2",
+                },
+            ),
+            httpx.Response(
+                200,
+                json={
+                    "results": [{"id": "page-2"}],
+                    "has_more": False,
+                    "next_cursor": None,
+                },
+            ),
+        ]
+    )
+
+    todos = await _fetch_notion_todos("notion-secret", ["todo-db"])
+
+    assert [todo["id"] for todo in todos] == ["page-1", "page-2"]
+    assert route.call_count == 2
+
+
+def test_load_google_token_raises_clear_error_for_expired_token_without_refresh(monkeypatch, tmp_path):
+    token_path = tmp_path / "token.json"
+    creds_path = tmp_path / "credentials.json"
+    token_path.write_text("{}")
+    creds_path.write_text("{}")
+    creds = SimpleNamespace(expired=True, refresh_token=None)
+
+    monkeypatch.setattr(
+        "cyberdeck.integrations.calendar.Credentials.from_authorized_user_file",
+        MagicMock(return_value=creds),
+    )
+
+    with pytest.raises(RuntimeError, match="expired Google Calendar token has no refresh token"):
+        _load_google_token(token_path, creds_path)
+
+
+@pytest.mark.asyncio
 async def test_fetch_loads_token_in_executor_and_returns_joined_events(monkeypatch, tmp_path):
     token_path = tmp_path / "token.json"
     creds_path = tmp_path / "credentials.json"
@@ -186,7 +261,7 @@ async def test_fetch_loads_token_in_executor_and_returns_joined_events(monkeypat
     assert result["events"][0]["notion"]["status"] == "Done"
     run_in_executor.assert_awaited_once()
     assert run_in_executor.await_args.args == (None, load_token, token_path, creds_path)
-    fetch_google.assert_awaited_once_with(token, ["primary", "family"], "2026-04-26")
+    fetch_google.assert_awaited_once_with(token, ["primary", "family"], "2026-04-26", "America/New_York")
     fetch_notion.assert_awaited_once_with("notion-secret", ["todo-db"])
 
 
