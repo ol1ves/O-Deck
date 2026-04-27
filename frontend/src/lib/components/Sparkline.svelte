@@ -1,6 +1,6 @@
 <script lang="ts">
   type SparkPoint = {
-    h: number;
+    h: string;
     t: number;
   };
 
@@ -19,7 +19,7 @@
   const path = $derived.by(() => {
     if (points.length < 2) return '';
 
-    const values = points.map((point) => point.h);
+    const values = points.map((point) => point.t);
     const min = Math.min(...values);
     const max = Math.max(...values);
     const range = max - min || 1;
@@ -28,7 +28,7 @@
     return points
       .map((point, index) => {
         const x = (index / last) * width;
-        const y = height - ((point.h - min) / range) * height;
+        const y = height - ((point.t - min) / range) * height;
         return `${index === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`;
       })
       .join(' ');
