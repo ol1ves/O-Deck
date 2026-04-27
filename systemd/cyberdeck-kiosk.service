@@ -1,9 +1,8 @@
 # systemd/cyberdeck-kiosk.service
 [Unit]
 Description=O-Deck Kiosk (Chromium fullscreen)
-After=graphical-session.target cyberdeck-backend.service
+After=cyberdeck-backend.service
 Wants=cyberdeck-backend.service
-BindsTo=graphical-session.target
 
 [Service]
 Type=simple
@@ -32,4 +31,4 @@ StandardError=journal
 SyslogIdentifier=cyberdeck-kiosk
 
 [Install]
-WantedBy=graphical-session.target
+WantedBy=default.target

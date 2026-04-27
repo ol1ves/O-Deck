@@ -67,7 +67,7 @@ EOF
 # --- Disable screen blanking via DPMS ---
 # Add to .bash_profile so it runs at TTY login
 BASH_PROFILE="${HOME}/.bash_profile"
-BLANKING_CMD="xset s off -dpms 2>/dev/null; sway -c /dev/null &>/dev/null &"
+BLANKING_CMD="xset s off -dpms 2>/dev/null; wayfire &>/dev/null &"
 MARKER="# cyberdeck-blanking"
 if ! grep -q "${MARKER}" "${BASH_PROFILE}" 2>/dev/null; then
   printf '\n%s\n%s\n' "${MARKER}" "${BLANKING_CMD}" >> "${BASH_PROFILE}"
