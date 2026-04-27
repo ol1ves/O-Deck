@@ -4,21 +4,6 @@
   import { appStore } from '$lib/ws';
   import { format_uptime_label } from '$lib/format';
 
-  const UTC_MONTHS = [
-    'JAN',
-    'FEB',
-    'MAR',
-    'APR',
-    'MAY',
-    'JUN',
-    'JUL',
-    'AUG',
-    'SEP',
-    'OCT',
-    'NOV',
-    'DEC'
-  ] as const;
-
   let {
     app = '',
     accent = 'var(--sand)',
@@ -41,12 +26,12 @@
 
   const liveUptime = $derived(state.uptimeOriginSeconds + (now - state.uptimePolledAt) / 1000);
   const uptimeLabel = $derived(format_uptime_label(liveUptime));
-  const lanLabel = $derived(device?.lan_ip || device?.hostname || '...');
+  const lanLabel = $derived(device?.lan_ip ?? device?.hostname ?? '...');
   const dateLabel = $derived(
-    `${UTC_MONTHS[new Date(now).getUTCMonth()]} ${new Date(now).getUTCDate()}`
+    new Date(now)
+      .toLocaleDateString('en-US', { day:'numeric', month:'short', timeZone:'UTC' })
+      .toUpperCase()
   );
-
-  const wsLabel = $derived(state.connected ? 'ws live' : 'ws idle');
 </script>
 
 <header class="od-status-bar" style:--od-status-accent={accent}>
@@ -58,11 +43,11 @@
       <span class="od-status-bar__app">{app}</span>
     {/if}
     <span class="od-status-bar__host"><span class="live-dot" aria-hidden="true">●</span> {lanLabel}</span>
-    <span class="od-status-bar__uptime">{uptimeLabel}</span>
+    <span class="od-status-bar__uptime">up {uptimeLabel}</span>
   </div>
 
   <div class="od-status-bar__right" aria-label="connection and date">
-    <span class="od-status-bar__ws">{wsLabel}</span>
+    <span class="od-status-bar__ws">{state.connected ? 'ws live' : 'ws idle'}</span>
     <span class="od-status-bar__date">{dateLabel}</span>
   </div>
 </header>
