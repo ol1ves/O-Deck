@@ -40,7 +40,7 @@
     display: inline-flex;
     align-items: flex-end;
     gap: 2px;
-    vertical-align: middle;
+    height: var(--hb-height, 14px);
   }
 
   .bar {
