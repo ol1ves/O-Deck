@@ -1,6 +1,19 @@
 @import 'tailwindcss';
 
 :root {
+  --bg: #15130f;
+  --bg-raised: rgba(31, 28, 24, 0.78);
+  --bg-solid: #1f1c18;
+  --ink: #f0e8d6;
+  --ink-dim: rgba(240, 232, 214, 0.55);
+  --ink-sub: rgba(240, 232, 214, 0.32);
+  --sand: #e6c89b;
+  --sage: #a8c19a;
+  --rose: #d49a8e;
+  --lav: #a08fb3;
+  --line: rgba(240, 232, 214, 0.08);
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
   --od-bg: #15130f;
   --od-bg-raised: rgba(31, 28, 24, 0.78);
   --od-bg-solid: #1f1c18;
@@ -53,6 +66,23 @@ body {
   flex-direction: column;
   gap: 10px;
   padding: 16px 22px;
+}
+
+.ticker-track {
+  animation: ticker 24s linear infinite;
+}
+
+.eq-bar {
+  animation: eq 1.1s ease-in-out infinite;
+  transform-origin: center bottom;
+}
+
+.blink {
+  animation: blink 1s steps(1, end) infinite;
+}
+
+.live-dot {
+  animation: live-dot 1.4s ease-in-out infinite;
 }
 
 @keyframes ticker {
