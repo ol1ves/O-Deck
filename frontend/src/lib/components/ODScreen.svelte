@@ -47,6 +47,7 @@
   .odeck-screen {
     position: relative;
     overflow: hidden;
+    height: 100vh;
     background: var(--od-bg);
     color: var(--od-ink);
     font-family: var(--font-mono);
@@ -58,6 +59,8 @@
     display: flex;
     flex-direction: column;
     gap: 10px;
+    box-sizing: border-box;
     height: 100%;
+    padding: 10px 16px;
   }
 </style>

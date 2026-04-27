@@ -99,6 +99,21 @@ export interface PomodoroData {
 
 export type MotionMode = 'calm' | 'music' | 'rain' | 'thunder';
 
+export interface DeviceInfo {
+  callsign: string;
+  name: string;
+  hostname: string;
+  lan_ip: string;
+  uptime_seconds: number;
+}
+
+export interface IntegrationStatus {
+  name: string;
+  error_count: number;
+  last_success: number | null;
+  last_error: string | null;
+}
+
 export interface AppState {
   weather: WeatherData | null;
   transit: TransitData | null;
@@ -108,6 +123,12 @@ export interface AppState {
   rss: RSSData | null;
   photos: PhotosData | null;
   pomodoro: PomodoroData | null;
+  device: DeviceInfo | null;
+  integrationStatus: IntegrationStatus[];
+  uptimeOriginSeconds: number;
+  uptimePolledAt: number;
+  themeOverride: MotionMode | null;
+  weatherWindow: '24h' | '6h';
   connected: boolean;
   motionMode: MotionMode;
 }

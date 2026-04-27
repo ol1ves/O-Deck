@@ -1,8 +1,9 @@
 device:
   name: "O-Deck"
+  callsign: "od-04"   # short device handle shown in the status bar
   resolution:
-    width: 1024
-    height: 600
+    width: 800
+    height: 480
   timezone: "America/New_York"
   location:
     lat: 40.6926

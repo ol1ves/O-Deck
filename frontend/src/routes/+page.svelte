@@ -9,7 +9,8 @@
   import Sparkline from '$lib/components/Sparkline.svelte';
   import Ticker from '$lib/components/Ticker.svelte';
   import WeatherIcon from '$lib/components/WeatherIcon.svelte';
-  import { appStore } from '$lib/ws';
+  import { format_uptime_label } from '$lib/format';
+  import { appStore, tapTheme, tapWeatherWindow } from '$lib/ws';
 
   const lineColors: Record<string, string> = {
     A: '#0039A6',
@@ -78,11 +79,45 @@
   };
 
   const state = $derived($appStore);
+
+  function statusFor(name: string) {
+    return state.integrationStatus.find((s) => s.name === name);
+  }
+
+  function copyForEmpty(name: string, emptyCopy: string): string {
+    const s = statusFor(name);
+    if (!s) return 'loading...';
+    if (s.last_success === null && s.error_count > 0) return 'unavailable';
+    if (s.last_success === null) return 'loading...';
+    return emptyCopy;
+  }
+
+  const device = $derived(state.device);
+  const liveUptimeSeconds = $derived(
+    state.uptimeOriginSeconds + (now.getTime() - state.uptimePolledAt) / 1000
+  );
+  const uptimeLabel = $derived(format_uptime_label(liveUptimeSeconds));
+  const callsign = $derived(device?.callsign ? `/${device.callsign}` : '');
+  const lanLabel = $derived(device?.lan_ip ?? device?.hostname ?? '...');
   const weather = $derived(state.weather);
+  const weatherWindow = $derived(state.weatherWindow);
+  const weatherSeries = $derived(
+    weather ? (weatherWindow === '6h' ? weather.hourly.slice(0, 6) : weather.hourly.slice(0, 24)) : []
+  );
+  const weatherEndLabel = $derived(weatherWindow === '6h' ? '+6H' : 'TODAY');
   const transit = $derived(state.transit);
   const spotify = $derived(state.spotify);
   const calendar = $derived(state.calendar);
   const github = $derived(state.github);
+  const commitSeries = $derived.by(() => {
+    if (!github?.commits.length) return [] as number[];
+    const out = new Array(36).fill(0);
+    const recent = github.commits.slice(0, 36);
+    for (let i = 0; i < recent.length; i++) {
+      out[36 - recent.length + i] = 1;
+    }
+    return out;
+  });
   const rss = $derived(state.rss);
   const mode = $derived(state.motionMode);
   const nowPlaying = $derived(spotify?.is_playing ? spotify : null);
@@ -103,13 +138,22 @@
 <ODScreen {mode}>
   <header class="status-bar">
     <div class="status-left">
-      <span class="brand">O-DECK</span>
-      <span class="callsign">/od-04</span>
-      <span><span class="live-dot">●</span> odeck.local</span>
-      <span class="dim">up 4d 11h</span>
+      <button type="button" class="brand brand-button" onclick={() => goto('/')} aria-label="home">O-DECK</button>
+      {#if callsign}<span class="callsign">{callsign}</span>{/if}
+      <span><span class="live-dot">●</span> {lanLabel}</span>
+      <span class="dim">up {uptimeLabel}</span>
     </div>
     <div class="status-right">
-      <span class:music={mode === 'music'} class:rain={mode === 'rain'} class:thunder={mode === 'thunder'}>◌ {mode}</span>
+      <button
+        type="button"
+        class="theme-tap"
+        class:music={mode === 'music'}
+        class:rain={mode === 'rain'}
+        class:thunder={mode === 'thunder'}
+        class:overridden={state.themeOverride !== null}
+        onclick={tapTheme}
+        aria-label="cycle theme"
+      >◌ {mode}</button>
       <span class="callsign">{state.connected ? 'ws live' : 'ws idle'}</span>
       <span class="date">{dateLabel}</span>
     </div>
@@ -142,9 +186,21 @@
             <div>{weather.cond.toLowerCase()}</div>
             <div class="sub">H{Math.round(weather.highF)}° L{Math.round(weather.lowF)}° · feels {Math.round(weather.feelsLikeF)}°</div>
           </div>
-          <div class="weather-sparkline">
-            <Sparkline points={weather.hourly} color="var(--sage)" width={140} height={30} />
-          </div>
+          <button
+            type="button"
+            class="weather-sparkline-btn"
+            onclick={tapWeatherWindow}
+            aria-label="toggle weather window"
+          >
+            <Sparkline
+              points={weatherSeries}
+              color="var(--sage)"
+              width={140}
+              height={36}
+              nowLabel="NOW"
+              endLabel={weatherEndLabel}
+            />
+          </button>
         {:else}
           <span class="loading">weather loading...</span>
         {/if}
@@ -182,7 +238,7 @@
           </div>
         </div>
       {:else}
-        <div class="loading">nothing playing</div>
+        <div class="loading">{copyForEmpty('spotify', 'nothing playing')}</div>
       {/if}
 
       {#if rss?.headlines.length}
@@ -229,7 +285,7 @@
             </div>
           {/each}
         {:else}
-          <div class="loading">transit loading...</div>
+          <div class="loading">{copyForEmpty('transit', 'no trains')}</div>
         {/if}
       </section>
 
@@ -261,7 +317,7 @@
           {/each}
 
           {#if !calendar?.events.length}
-            <div class="loading">calendar loading...</div>
+            <div class="loading">{copyForEmpty('calendar', 'no events today')}</div>
           {/if}
         </div>
       </section>
@@ -271,7 +327,7 @@
   <footer class="home-footer">
     <div class="git-strip">
       <span>git</span>
-      <CommitHeartbeat color="var(--sage)" count={36} />
+      <CommitHeartbeat color="var(--sage)" series={commitSeries} />
       <span class="sub">{github?.commits.length ?? 0}↑ {github?.prs.length ?? 0}pr</span>
     </div>
     <span class="footer-rule"></span>
@@ -292,7 +348,6 @@
 
 <style>
   :global(.odeck-screen) {
-    min-height: 100vh;
     background: var(--bg);
   }
 
@@ -328,9 +383,35 @@
     gap: 14px;
   }
 
+  .theme-tap {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    letter-spacing: inherit;
+    cursor: pointer;
+  }
+
+  .theme-tap.overridden {
+    text-decoration: underline dotted currentColor;
+    text-underline-offset: 3px;
+  }
+
   .brand {
     color: var(--ink);
     font-weight: 500;
+  }
+
+  .brand-button {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--ink);
+    font: inherit;
+    font-weight: 500;
+    letter-spacing: inherit;
+    cursor: pointer;
   }
 
   .callsign,
@@ -446,9 +527,12 @@
     line-height: 1.5;
   }
 
-  .weather-sparkline {
+  .weather-sparkline-btn {
     margin-left: auto;
-    padding-bottom: 4px;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
   }
 
   .now-playing-rail {
@@ -693,6 +777,7 @@
 
   .home-footer {
     gap: 16px;
+    margin-top: auto;
     padding-top: 10px;
     border-top: 1px solid var(--line);
   }

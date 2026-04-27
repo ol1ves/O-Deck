@@ -89,3 +89,56 @@ def test_scheduler_shutdown_safe_when_not_running():
     scheduler = IntegrationScheduler()
 
     scheduler.shutdown()
+
+
+class _BoomIntegration(Integration):
+    name = "boom"
+
+    def event_name(self) -> str:
+        return "boom.update"
+
+    async def fetch(self) -> dict:
+        raise RuntimeError("kaboom: 401 unauthorized")
+
+
+@pytest.mark.asyncio
+async def test_integration_status_includes_last_error_after_failure():
+    integration = _BoomIntegration(cache=Mock(), ws_manager=Mock(), config=Mock())
+
+    await integration.run()
+
+    status = integration.status
+    assert status["error_count"] == 1
+    assert status["last_error"] is not None
+    assert "kaboom" in status["last_error"]
+    assert "401" in status["last_error"]
+
+
+@pytest.mark.asyncio
+async def test_integration_status_clears_last_error_after_success():
+    cache = Mock()
+    cache.set = Mock(return_value=False)
+    ws = Mock()
+    ws.broadcast = AsyncMock()
+
+    class _FlipFlop(Integration):
+        name = "flipflop"
+        calls = 0
+
+        def event_name(self) -> str:
+            return "flipflop.update"
+
+        async def fetch(self) -> dict:
+            _FlipFlop.calls += 1
+            if _FlipFlop.calls == 1:
+                raise RuntimeError("first call fails")
+            return {"ok": True}
+
+    integration = _FlipFlop(cache=cache, ws_manager=ws, config=Mock())
+
+    await integration.run()
+    assert integration.status["last_error"] is not None
+
+    await integration.run()
+    assert integration.status["last_error"] is None
+    assert integration.status["error_count"] == 0
