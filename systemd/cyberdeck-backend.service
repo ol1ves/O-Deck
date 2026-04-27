@@ -1,0 +1,20 @@
+# systemd/cyberdeck-backend.service
+[Unit]
+Description=O-Deck Backend (FastAPI)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/cyberdeck
+Environment=HOME=%h
+ExecStart=%h/cyberdeck/.venv/bin/uvicorn cyberdeck.main:app --host 0.0.0.0 --port 8080
+Restart=on-failure
+RestartSec=5
+# Write logs to journal only (no SD card writes)
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=cyberdeck-backend
+
+[Install]
+WantedBy=default.target
