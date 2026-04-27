@@ -79,6 +79,19 @@
   };
 
   const state = $derived($appStore);
+
+  function statusFor(name: string) {
+    return state.integrationStatus.find((s) => s.name === name);
+  }
+
+  function copyForEmpty(name: string, emptyCopy: string): string {
+    const s = statusFor(name);
+    if (!s) return 'loading...';
+    if (s.last_success === null && s.error_count > 0) return 'unavailable';
+    if (s.last_success === null) return 'loading...';
+    return emptyCopy;
+  }
+
   const device = $derived(state.device);
   const liveUptimeSeconds = $derived(
     state.uptimeOriginSeconds + (now.getTime() - state.uptimePolledAt) / 1000
@@ -225,7 +238,7 @@
           </div>
         </div>
       {:else}
-        <div class="loading">nothing playing</div>
+        <div class="loading">{copyForEmpty('spotify', 'nothing playing')}</div>
       {/if}
 
       {#if rss?.headlines.length}
@@ -272,7 +285,7 @@
             </div>
           {/each}
         {:else}
-          <div class="loading">transit loading...</div>
+          <div class="loading">{copyForEmpty('transit', 'no trains')}</div>
         {/if}
       </section>
 
@@ -304,7 +317,7 @@
           {/each}
 
           {#if !calendar?.events.length}
-            <div class="loading">calendar loading...</div>
+            <div class="loading">{copyForEmpty('calendar', 'no events today')}</div>
           {/if}
         </div>
       </section>
