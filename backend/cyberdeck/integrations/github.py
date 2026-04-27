@@ -43,7 +43,7 @@ class GitHubIntegration(Integration):
 
         return {
             "commits": _push_commits(events_response.json()),
-            "prs": _issue_items(prs_response.json()),
+            "prs": _issue_items(prs_response.json(), include_status=True),
             "issues": _issue_items(issues_response.json()),
         }
 
@@ -98,7 +98,7 @@ def _first_line(message: str) -> str:
     return message.splitlines()[0] if message.splitlines() else ""
 
 
-def _issue_items(payload: Any) -> list[dict[str, Any]]:
+def _issue_items(payload: Any, *, include_status: bool = False) -> list[dict[str, Any]]:
     if not isinstance(payload, dict):
         return []
 
@@ -106,17 +106,21 @@ def _issue_items(payload: Any) -> list[dict[str, Any]]:
     if not isinstance(items, list):
         return []
 
-    return [_issue_item(item) for item in items if isinstance(item, dict)]
+    return [_issue_item(item, include_status=include_status) for item in items if isinstance(item, dict)]
 
 
-def _issue_item(item: dict[str, Any]) -> dict[str, Any]:
-    return {
+def _issue_item(item: dict[str, Any], *, include_status: bool) -> dict[str, Any]:
+    result = {
         "title": item.get("title"),
         "url": item.get("html_url"),
         "repo": _repo_from_url(item.get("repository_url")),
         "number": item.get("number"),
+        "age": item.get("created_at"),
         "label": _first_label(item.get("labels")),
     }
+    if include_status:
+        result["status"] = item.get("state")
+    return result
 
 
 def _repo_from_url(repository_url: Any) -> str:

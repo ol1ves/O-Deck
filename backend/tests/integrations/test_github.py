@@ -148,6 +148,8 @@ async def test_fetch_maps_open_prs():
                         "html_url": "https://github.com/octocat/repo/pull/12",
                         "repository_url": "https://api.github.com/repos/octocat/repo",
                         "number": 12,
+                        "state": "open",
+                        "created_at": "2026-04-24T10:00:00Z",
                         "labels": [{"name": "backend"}],
                     }
                 ),
@@ -164,6 +166,8 @@ async def test_fetch_maps_open_prs():
             "url": "https://github.com/octocat/repo/pull/12",
             "repo": "octocat/repo",
             "number": 12,
+            "status": "open",
+            "age": "2026-04-24T10:00:00Z",
             "label": "backend",
         }
     ]
@@ -184,6 +188,7 @@ async def test_fetch_maps_assigned_issues_with_empty_label_fallback():
                         "html_url": "https://github.com/octocat/repo/issues/34",
                         "repository_url": "https://api.github.com/repos/octocat/repo",
                         "number": 34,
+                        "created_at": "2026-04-25T10:00:00Z",
                         "labels": [],
                     }
                 ),
@@ -199,6 +204,7 @@ async def test_fetch_maps_assigned_issues_with_empty_label_fallback():
             "url": "https://github.com/octocat/repo/issues/34",
             "repo": "octocat/repo",
             "number": 34,
+            "age": "2026-04-25T10:00:00Z",
             "label": "",
         }
     ]
