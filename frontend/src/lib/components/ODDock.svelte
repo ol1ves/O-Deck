@@ -15,12 +15,12 @@
 
   const items: DockItem[] = [
     { key: 'HOME', glyph: '⌂', href: '/' },
-    { key: 'POMO', glyph: '◑', href: '/apps/pomo' },
-    { key: 'GH', glyph: '◇', href: '/apps/github' },
-    { key: 'MAP', glyph: '▤', href: '/apps/map' },
-    { key: 'DOOM', glyph: '□', href: '/apps/doom' },
-    { key: 'PHOTO', glyph: '◐', href: '/apps/photo' },
-    { key: 'SHOW', glyph: '✦', href: '/apps/show' },
+    { key: 'POMO', glyph: '◑', href: '/pomodoro' },
+    { key: 'GH', glyph: '◇', href: '/github' },
+    { key: 'MAP', glyph: '▤', href: '/subway' },
+    { key: 'DOOM', glyph: '□', href: '/doomscroll' },
+    { key: 'PHOTO', glyph: '◐', href: '/photos' },
+    { key: 'SHOW', glyph: '✦', href: '/showcase' },
   ];
 
   const handleClick = (event: MouseEvent, href: string) => {
@@ -35,7 +35,7 @@
     {#each items as item}
       <a
         class:od-dock__item--active={active === item.key}
-        class="od-dock__item"
+        class="od-dock__item dock-btn"
         href={item.href}
         aria-current={active === item.key ? 'page' : undefined}
         onclick={(event) => handleClick(event, item.href)}
