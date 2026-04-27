@@ -96,6 +96,15 @@
   const spotify = $derived(state.spotify);
   const calendar = $derived(state.calendar);
   const github = $derived(state.github);
+  const commitSeries = $derived.by(() => {
+    if (!github?.commits.length) return [] as number[];
+    const out = new Array(36).fill(0);
+    const recent = github.commits.slice(0, 36);
+    for (let i = 0; i < recent.length; i++) {
+      out[36 - recent.length + i] = 1;
+    }
+    return out;
+  });
   const rss = $derived(state.rss);
   const mode = $derived(state.motionMode);
   const nowPlaying = $derived(spotify?.is_playing ? spotify : null);
@@ -305,7 +314,7 @@
   <footer class="home-footer">
     <div class="git-strip">
       <span>git</span>
-      <CommitHeartbeat color="var(--sage)" count={36} />
+      <CommitHeartbeat color="var(--sage)" series={commitSeries} />
       <span class="sub">{github?.commits.length ?? 0}↑ {github?.prs.length ?? 0}pr</span>
     </div>
     <span class="footer-rule"></span>
