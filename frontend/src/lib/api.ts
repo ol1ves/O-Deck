@@ -6,30 +6,34 @@ const BASE = '';
 export async function fetchInitialState(): Promise<void> {
   void fetchConfigBestEffort();
 
-  const stateResp = await fetch(`${BASE}/api/state`);
+  try {
+    const stateResp = await fetch(`${BASE}/api/state`);
 
-  if (!stateResp.ok) {
-    return;
+    if (!stateResp.ok) {
+      return;
+    }
+
+    const state = (await stateResp.json()) as Partial<AppState>;
+
+    appStore.update((current) => {
+      const next: AppState = {
+        ...current,
+        weather: state.weather ?? current.weather,
+        transit: state.transit ?? current.transit,
+        spotify: state.spotify ?? current.spotify,
+        calendar: state.calendar ?? current.calendar,
+        github: state.github ?? current.github,
+        rss: state.rss ?? current.rss,
+        photos: state.photos ?? current.photos,
+        pomodoro: state.pomodoro ?? current.pomodoro
+      };
+
+      next.motionMode = deriveMotionMode(next);
+      return next;
+    });
+  } catch {
+    // best-effort initial hydration; network/parse errors must not reject callers
   }
-
-  const state = (await stateResp.json()) as Partial<AppState>;
-
-  appStore.update((current) => {
-    const next: AppState = {
-      ...current,
-      weather: state.weather ?? current.weather,
-      transit: state.transit ?? current.transit,
-      spotify: state.spotify ?? current.spotify,
-      calendar: state.calendar ?? current.calendar,
-      github: state.github ?? current.github,
-      rss: state.rss ?? current.rss,
-      photos: state.photos ?? current.photos,
-      pomodoro: state.pomodoro ?? current.pomodoro
-    };
-
-    next.motionMode = deriveMotionMode(next);
-    return next;
-  });
 }
 
 export async function fetchStatus(): Promise<void> {
