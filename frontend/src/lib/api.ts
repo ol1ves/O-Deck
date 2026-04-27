@@ -4,20 +4,9 @@ import { appStore, deriveMotionMode } from './ws';
 const BASE = '';
 
 export async function fetchInitialState(): Promise<void> {
-  const [stateResult, configResult] = await Promise.allSettled([
-    fetch(`${BASE}/api/state`),
-    fetch(`${BASE}/api/config`)
-  ]);
+  void fetchConfigBestEffort();
 
-  if (configResult.status === 'fulfilled' && configResult.value.ok) {
-    await configResult.value.json().catch(() => undefined);
-  }
-
-  if (stateResult.status !== 'fulfilled') {
-    return;
-  }
-
-  const stateResp = stateResult.value;
+  const stateResp = await fetch(`${BASE}/api/state`);
 
   if (!stateResp.ok) {
     return;
@@ -41,6 +30,18 @@ export async function fetchInitialState(): Promise<void> {
     next.motionMode = deriveMotionMode(next);
     return next;
   });
+}
+
+async function fetchConfigBestEffort(): Promise<void> {
+  try {
+    const response = await fetch(`${BASE}/api/config`);
+
+    if (response.ok) {
+      await response.json().catch(() => undefined);
+    }
+  } catch {
+    // Config is optional for initial hydration; state must not wait on it.
+  }
 }
 
 export async function startPomodoro(preset: {
