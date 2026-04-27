@@ -7,13 +7,7 @@
   let { children }: { children?: Snippet } = $props();
 
   onMount(() => {
-    void (async () => {
-      try {
-        await fetchInitialState();
-      } catch (error) {
-        console.warn('initial state unavailable', error);
-      }
-    })();
+    void fetchInitialState();
     void fetchStatus();
     connectWebSocket();
     const id = setInterval(() => void fetchStatus(), 30_000);
