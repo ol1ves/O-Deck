@@ -62,9 +62,17 @@ info "User: ${USER}, Home: ${HOME}"
 info "Step 2/10: Installing system packages"
 
 CHROMIUM_PKG=""
-if apt-cache show chromium-browser >/dev/null 2>&1; then
+
+has_install_candidate() {
+  local pkg="$1"
+  local candidate
+  candidate="$(apt-cache policy "${pkg}" 2>/dev/null | awk -F': ' '/Candidate:/ {print $2; exit}')"
+  [[ -n "${candidate}" && "${candidate}" != "(none)" ]]
+}
+
+if has_install_candidate "chromium-browser"; then
   CHROMIUM_PKG="chromium-browser"
-elif apt-cache show chromium >/dev/null 2>&1; then
+elif has_install_candidate "chromium"; then
   CHROMIUM_PKG="chromium"
 else
   error "Could not find a Chromium package (tried: chromium-browser, chromium)."
