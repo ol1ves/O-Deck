@@ -54,6 +54,21 @@
     return () => clearInterval(clock);
   });
 
+  let tapCount = $state(0);
+  let tapTimer: ReturnType<typeof setTimeout> | undefined;
+
+  function handleTimeTap() {
+    tapCount++;
+    if (tapTimer) clearTimeout(tapTimer);
+    tapTimer = setTimeout(() => {
+      tapCount = 0;
+    }, 2000);
+    if (tapCount >= 5) {
+      tapCount = 0;
+      void goto('/diagnostics');
+    }
+  }
+
   const weatherIconKind = (code: number | undefined) => {
     if (code === 0 || code === 1) return 'sun';
     if (code === 2 || code === 3 || code === undefined) return 'cloud-sun';
@@ -101,7 +116,14 @@
   </header>
 
   <section class="main-grid" aria-label="O-DECK home dashboard">
-    <div class="time-block">
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
+    <div
+      class="time-block"
+      role="button"
+      tabindex="-1"
+      onclick={handleTimeTap}
+      aria-label="time — tap 5× for diagnostics"
+    >
       <div class="clock-row">
         <span class="clock-hhmm">{hh}<span class="blink colon">:</span>{mm}</span>
         <div class="clock-meta">
