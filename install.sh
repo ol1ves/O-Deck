@@ -32,8 +32,23 @@ if [[ "$(uname -m)" != "aarch64" ]]; then
   error "This installer requires a 64-bit ARM system (aarch64). Got: $(uname -m)"
 fi
 
-if ! grep -qi "bookworm" /etc/os-release 2>/dev/null; then
-  error "This installer requires Raspberry Pi OS Bookworm. Current OS may not be compatible."
+if [[ -r /etc/os-release ]]; then
+  # shellcheck disable=SC1091
+  . /etc/os-release
+else
+  error "Cannot read /etc/os-release to detect operating system."
+fi
+
+if [[ "${ID:-}" != "debian" ]]; then
+  error "This installer currently supports Debian-based systems only. Detected: ${ID:-unknown}"
+fi
+
+if [[ "${VERSION_CODENAME:-}" == "bookworm" ]]; then
+  info "Detected Debian Bookworm-compatible system."
+elif [[ "${VERSION_CODENAME:-}" == "trixie" ]]; then
+  warning "Detected Debian Trixie. Proceeding, but package names/behavior may differ from Bookworm."
+else
+  error "This installer requires Debian Bookworm or Trixie. Detected codename: ${VERSION_CODENAME:-unknown}"
 fi
 
 if [[ "${EUID}" -eq 0 ]]; then
