@@ -61,11 +61,22 @@ info "User: ${USER}, Home: ${HOME}"
 # ─── Step 2: System packages ─────────────────────────────────────────────────
 info "Step 2/10: Installing system packages"
 
+CHROMIUM_PKG=""
+if apt-cache show chromium-browser >/dev/null 2>&1; then
+  CHROMIUM_PKG="chromium-browser"
+elif apt-cache show chromium >/dev/null 2>&1; then
+  CHROMIUM_PKG="chromium"
+else
+  error "Could not find a Chromium package (tried: chromium-browser, chromium)."
+fi
+
+info "Using Chromium package: ${CHROMIUM_PKG}"
+
 sudo apt-get update -qq
 sudo apt-get install -y --no-install-recommends \
   python3 python3-pip python3-venv python3-dev \
   nodejs npm \
-  chromium-browser \
+  "${CHROMIUM_PKG}" \
   git sqlite3 curl wget \
   build-essential \
   libssl-dev libffi-dev \
