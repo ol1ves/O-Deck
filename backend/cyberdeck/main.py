@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import socket as _socket
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
@@ -11,6 +12,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.websockets import WebSocketDisconnect
 
+from cyberdeck import device as _device
 from cyberdeck.cache import Cache
 from cyberdeck.config import load_config
 from cyberdeck.integrations.calendar import CalendarIntegration
@@ -103,8 +105,15 @@ async def api_config() -> dict[str, Any]:
 
 @app.get("/api/status")
 async def api_status() -> dict[str, Any]:
-    """Diagnostics: WS client count + integration statuses."""
+    """Diagnostics: device info, WS client count, integration statuses (with last_error)."""
     return {
+        "device": {
+            "callsign": settings.app.device.callsign,
+            "name": settings.app.device.name,
+            "hostname": _socket.gethostname(),
+            "lan_ip": _device.get_lan_ip(),
+            "uptime_seconds": _device.uptime_seconds(),
+        },
         "ws_clients": ws_manager.client_count,
         "integrations": [i.status for i in scheduler._integrations],
     }

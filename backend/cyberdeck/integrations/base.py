@@ -22,6 +22,7 @@ class Integration(ABC):
         self.config = config
         self._error_count = 0
         self._last_success: float | None = None
+        self._last_error: str | None = None
 
     @abstractmethod
     async def fetch(self) -> dict[str, Any]:
@@ -38,9 +39,11 @@ class Integration(ABC):
             if changed:
                 await self.ws.broadcast(self.event_name(), data)
             self._error_count = 0
+            self._last_error = None
             self._last_success = time.time()
         except Exception as exc:
             self._error_count += 1
+            self._last_error = f"{type(exc).__name__}: {exc}"
             logger.error(
                 "integration %s failed (error #%d): %s",
                 self.name,
@@ -55,4 +58,5 @@ class Integration(ABC):
             "name": self.name,
             "error_count": self._error_count,
             "last_success": self._last_success,
+            "last_error": self._last_error,
         }

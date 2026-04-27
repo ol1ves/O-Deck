@@ -28,6 +28,27 @@ def test_api_state_includes_all_integrations_and_pomodoro():
     assert data["pomodoro"]["phase"] == "idle"
 
 
+def test_api_status_includes_device_info_and_last_error():
+    from cyberdeck import main as m
+
+    resp = TestClient(m.app).get("/api/status")
+
+    assert resp.status_code == 200
+    body = resp.json()
+
+    assert "device" in body
+    device = body["device"]
+    assert device["callsign"] == m.settings.app.device.callsign
+    assert device["hostname"]
+    assert device["lan_ip"]
+    assert isinstance(device["uptime_seconds"], (int, float))
+    assert device["uptime_seconds"] >= 0
+
+    assert isinstance(body["integrations"], list)
+    for entry in body["integrations"]:
+        assert "last_error" in entry
+
+
 def test_api_config_includes_pomodoro_presets():
     from cyberdeck import main as m
 

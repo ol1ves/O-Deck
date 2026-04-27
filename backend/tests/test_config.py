@@ -9,8 +9,8 @@ from cyberdeck.config import AppConfig, load_config
 
 def test_app_config_has_sane_defaults():
     cfg = AppConfig.model_validate({})
-    assert cfg.device.resolution.width == 1024
-    assert cfg.device.resolution.height == 600
+    assert cfg.device.resolution.width == 800
+    assert cfg.device.resolution.height == 480
     assert cfg.device.timezone == "America/New_York"
     assert cfg.weather.provider == "open-meteo"
     assert cfg.transit.refresh_seconds == 30
@@ -44,7 +44,7 @@ def test_load_config_reads_yaml_file(tmp_path):
     assert settings.app.device.name == "Pi-Test"
     assert settings.app.device.timezone == "America/Chicago"
     assert settings.app.transit.refresh_seconds == 60
-    assert settings.app.device.resolution.width == 1024  # default preserved
+    assert settings.app.device.resolution.width == 800  # default preserved
 
 
 def test_load_config_works_when_yaml_missing(tmp_path):
@@ -90,3 +90,22 @@ def test_settings_accepts_mta_api_key(monkeypatch):
     settings = Settings()
 
     assert settings.mta_api_key == "test-key"
+
+
+def test_device_config_default_callsign():
+    from cyberdeck.config import DeviceConfig
+
+    cfg = DeviceConfig()
+    assert cfg.callsign == "od-01"
+
+
+def test_device_config_loads_callsign_from_yaml(tmp_path):
+    from cyberdeck.config import load_config
+
+    cfg_file = tmp_path / "config.yaml"
+    cfg_file.write_text("device:\n  callsign: od-04\n")
+    env_file = tmp_path / ".env"
+    env_file.write_text("")
+
+    settings = load_config(config_path=cfg_file, env_path=env_file)
+    assert settings.app.device.callsign == "od-04"

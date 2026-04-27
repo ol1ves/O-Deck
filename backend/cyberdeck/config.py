@@ -24,6 +24,7 @@ class Location(BaseModel):
 
 class DeviceConfig(BaseModel):
     name: str = "O-Deck"
+    callsign: str = "od-01"
     resolution: Resolution = Field(default_factory=Resolution)
     timezone: str = "America/New_York"
     location: Location = Field(default_factory=Location)
