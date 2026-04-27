@@ -123,7 +123,7 @@
         class:music={mode === 'music'}
         class:rain={mode === 'rain'}
         class:thunder={mode === 'thunder'}
-        class:overridden={state.themeOverride != null}
+        class:overridden={state.themeOverride !== null}
         onclick={tapTheme}
         aria-label="cycle theme"
       >◌ {mode}</button>
