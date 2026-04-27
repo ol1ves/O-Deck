@@ -30,10 +30,10 @@ if [[ ! -f "${WAYFIRE_CONFIG}" ]]; then
 fi
 
 # Ensure [autostart] section exists and has cyberdeck entry
-python3 - "${WAYFIRE_CONFIG}" << 'PYEOF'
+python3 - "${WAYFIRE_CONFIG}" "${REPO_DIR}" << 'PYEOF'
 import sys, configparser
 
-path = sys.argv[1]
+path, repo_dir = sys.argv[1], sys.argv[2]
 config = configparser.ConfigParser(allow_no_value=True)
 config.optionxform = str
 config.read(path)
@@ -41,7 +41,7 @@ config.read(path)
 if not config.has_section("autostart"):
     config.add_section("autostart")
 
-config.set("autostart", "cyberdeck", "systemctl --user start cyberdeck-kiosk.service")
+config.set("autostart", "cyberdeck", f"{repo_dir}/scripts/kiosk-launch.sh")
 
 # Disable screen blanking in [core]
 if not config.has_section("core"):
