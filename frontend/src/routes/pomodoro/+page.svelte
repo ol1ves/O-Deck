@@ -30,7 +30,7 @@
   const total = $derived((pomo?.work_min ?? 25) * 60);
   const elapsed = $derived(total - localRemaining);
   const progress = $derived(total > 0 ? elapsed / total : 0);
-  const circum = 2 * Math.PI * 160;
+  const circum = 2 * Math.PI * 110;
   const dashArray = $derived(`${circum * progress} ${circum}`);
 
   type Preset = { name: string; work_min: number; break_min: number; cycles: number; long_break_min: number };
@@ -87,26 +87,26 @@
 
   <main class="pomo-main">
     <div class="ring-wrap">
-      <svg width="340" height="340" viewBox="0 0 340 340">
-        <circle cx="170" cy="170" r="160" fill="none" stroke="rgba(240,232,214,0.06)" stroke-width="2" />
+      <svg width="240" height="240" viewBox="0 0 240 240">
+        <circle cx="120" cy="120" r="110" fill="none" stroke="rgba(240,232,214,0.06)" stroke-width="2" />
         <circle
-          cx="170"
-          cy="170"
-          r="160"
+          cx="120"
+          cy="120"
+          r="110"
           fill="none"
           stroke="var(--rose)"
           stroke-width="3"
           stroke-dasharray={dashArray}
           stroke-linecap="round"
-          transform="rotate(-90 170 170)"
+          transform="rotate(-90 120 120)"
         />
         {#each tickmarks as i}
           {@const a = -Math.PI / 2 + ((i + 1) / 5) * Math.PI * 2}
           <line
-            x1={170 + Math.cos(a) * 150}
-            y1={170 + Math.sin(a) * 150}
-            x2={170 + Math.cos(a) * 166}
-            y2={170 + Math.sin(a) * 166}
+            x1={120 + Math.cos(a) * 102}
+            y1={120 + Math.sin(a) * 102}
+            x2={120 + Math.cos(a) * 116}
+            y2={120 + Math.sin(a) * 116}
             stroke="var(--ink-sub)"
             stroke-width="1"
           />
@@ -188,13 +188,13 @@
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    gap: 24px;
+    gap: 14px;
     position: relative;
   }
   .ring-wrap {
     position: relative;
-    width: 340px;
-    height: 340px;
+    width: 240px;
+    height: 240px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -210,8 +210,8 @@
   }
   .countdown-time {
     font-weight: 200;
-    font-size: 118px;
-    letter-spacing: -5px;
+    font-size: 78px;
+    letter-spacing: -3px;
     line-height: 0.95;
     font-variant-numeric: tabular-nums;
     color: var(--ink);
