@@ -4,11 +4,20 @@ import { appStore, deriveMotionMode } from './ws';
 const BASE = '';
 
 export async function fetchInitialState(): Promise<void> {
-  const [stateResp, configResp] = await Promise.all([fetch(`${BASE}/api/state`), fetch(`${BASE}/api/config`)]);
+  const [stateResult, configResult] = await Promise.allSettled([
+    fetch(`${BASE}/api/state`),
+    fetch(`${BASE}/api/config`)
+  ]);
 
-  if (configResp.ok) {
-    await configResp.json().catch(() => undefined);
+  if (configResult.status === 'fulfilled' && configResult.value.ok) {
+    await configResult.value.json().catch(() => undefined);
   }
+
+  if (stateResult.status !== 'fulfilled') {
+    return;
+  }
+
+  const stateResp = stateResult.value;
 
   if (!stateResp.ok) {
     return;
@@ -41,7 +50,7 @@ export async function startPomodoro(preset: {
   cycles: number;
   long_break_min: number;
 }): Promise<void> {
-  await fetch(`${BASE}/api/pomodoro/start`, {
+  await postPomodoro('/api/pomodoro/start', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(preset)
@@ -49,9 +58,17 @@ export async function startPomodoro(preset: {
 }
 
 export async function pausePomodoro(): Promise<void> {
-  await fetch(`${BASE}/api/pomodoro/pause`, { method: 'POST' });
+  await postPomodoro('/api/pomodoro/pause', { method: 'POST' });
 }
 
 export async function stopPomodoro(): Promise<void> {
-  await fetch(`${BASE}/api/pomodoro/stop`, { method: 'POST' });
+  await postPomodoro('/api/pomodoro/stop', { method: 'POST' });
+}
+
+async function postPomodoro(path: string, init: RequestInit): Promise<void> {
+  const response = await fetch(`${BASE}${path}`, init);
+
+  if (!response.ok) {
+    throw new Error(`Pomodoro request failed: ${response.status} ${response.statusText}`);
+  }
 }

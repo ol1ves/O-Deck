@@ -87,23 +87,27 @@ export function applyEvent(type: string, data: unknown): void {
 }
 
 export function connectWebSocket(url?: string): void {
-  const wsUrl =
-    url ?? (typeof window !== 'undefined' ? `ws://${window.location.host}/ws` : 'ws://localhost:8080/ws');
+  const wsUrl = url ?? getDefaultWebSocketUrl();
 
   if (socket?.readyState === WebSocket.OPEN || socket?.readyState === WebSocket.CONNECTING) {
     return;
   }
 
   clearReconnectTimer();
-  socket = new WebSocket(wsUrl);
+  const localSocket = new WebSocket(wsUrl);
+  socket = localSocket;
 
-  socket.addEventListener('open', () => {
+  localSocket.addEventListener('open', () => {
+    if (localSocket !== socket) return;
+
     backoffMs = 1_000;
     appStore.update((state) => ({ ...state, connected: true }));
-    startPingTimer();
+    startPingTimer(localSocket);
   });
 
-  socket.addEventListener('message', (event) => {
+  localSocket.addEventListener('message', (event) => {
+    if (localSocket !== socket) return;
+
     try {
       const message = JSON.parse(String(event.data)) as ServerMessage;
       const type = message.type ?? message.event;
@@ -116,23 +120,34 @@ export function connectWebSocket(url?: string): void {
     }
   });
 
-  socket.addEventListener('close', () => {
+  localSocket.addEventListener('close', () => {
+    if (localSocket !== socket) return;
+
     socket = null;
     stopPingTimer();
     appStore.update((state) => ({ ...state, connected: false }));
     scheduleReconnect(wsUrl);
   });
 
-  socket.addEventListener('error', () => {
-    socket?.close();
+  localSocket.addEventListener('error', () => {
+    localSocket.close();
   });
 }
 
-function startPingTimer(): void {
+function getDefaultWebSocketUrl(): string {
+  if (typeof window === 'undefined') {
+    return 'ws://localhost:8080/ws';
+  }
+
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  return `${protocol}//${window.location.host}/ws`;
+}
+
+function startPingTimer(currentSocket: WebSocket): void {
   stopPingTimer();
   pingTimer = setInterval(() => {
-    if (socket?.readyState === WebSocket.OPEN) {
-      socket.send('ping');
+    if (currentSocket === socket && currentSocket.readyState === WebSocket.OPEN) {
+      currentSocket.send('ping');
     }
   }, 15_000);
 }
