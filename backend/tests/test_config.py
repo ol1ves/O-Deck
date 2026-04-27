@@ -80,3 +80,13 @@ def test_load_config_reads_env_secrets(tmp_path):
     settings = load_config(config_path=cfg_file, env_path=env_file)
 
     assert settings.github_token == "ghp_abc123"
+
+
+def test_settings_accepts_mta_api_key(monkeypatch):
+    monkeypatch.setenv("MTA_API_KEY", "test-key")
+
+    from cyberdeck.config import Settings
+
+    settings = Settings()
+
+    assert settings.mta_api_key == "test-key"

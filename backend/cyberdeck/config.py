@@ -178,6 +178,7 @@ class Settings(BaseSettings):
     spotify_client_secret: str | None = None
     spotify_refresh_token: str | None = None
     github_token: str | None = None
+    mta_api_key: str | None = None
 
     app: AppConfig = Field(default_factory=AppConfig)
 
