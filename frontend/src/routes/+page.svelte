@@ -10,7 +10,7 @@
   import Ticker from '$lib/components/Ticker.svelte';
   import WeatherIcon from '$lib/components/WeatherIcon.svelte';
   import { format_uptime_label } from '$lib/format';
-  import { appStore } from '$lib/ws';
+  import { appStore, tapTheme } from '$lib/ws';
 
   const lineColors: Record<string, string> = {
     A: '#0039A6',
@@ -117,7 +117,16 @@
       <span class="dim">up {uptimeLabel}</span>
     </div>
     <div class="status-right">
-      <span class:music={mode === 'music'} class:rain={mode === 'rain'} class:thunder={mode === 'thunder'}>◌ {mode}</span>
+      <button
+        type="button"
+        class="theme-tap"
+        class:music={mode === 'music'}
+        class:rain={mode === 'rain'}
+        class:thunder={mode === 'thunder'}
+        class:overridden={state.themeOverride != null}
+        onclick={tapTheme}
+        aria-label="cycle theme"
+      >◌ {mode}</button>
       <span class="callsign">{state.connected ? 'ws live' : 'ws idle'}</span>
       <span class="date">{dateLabel}</span>
     </div>
@@ -333,6 +342,21 @@
 
   .status-right {
     gap: 14px;
+  }
+
+  .theme-tap {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    letter-spacing: inherit;
+    cursor: pointer;
+  }
+
+  .theme-tap.overridden {
+    text-decoration: underline dotted currentColor;
+    text-underline-offset: 3px;
   }
 
   .brand {

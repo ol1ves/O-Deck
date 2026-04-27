@@ -54,6 +54,27 @@ export function deriveMotionMode(state: AppState): MotionMode {
   return 'calm';
 }
 
+const THEME_OVERRIDE_DECAY_MS = 60_000;
+let themeOverrideTimer: ReturnType<typeof setTimeout> | null = null;
+const themeCycle: MotionMode[] = ['calm', 'music', 'rain', 'thunder'];
+
+export function tapTheme(): void {
+  appStore.update((state) => {
+    const current = state.themeOverride ?? state.motionMode;
+    const idx = themeCycle.indexOf(current);
+    const next = themeCycle[(idx + 1) % themeCycle.length];
+    return { ...state, themeOverride: next, motionMode: next };
+  });
+  if (themeOverrideTimer) clearTimeout(themeOverrideTimer);
+  themeOverrideTimer = setTimeout(() => {
+    appStore.update((state) => ({
+      ...state,
+      themeOverride: null,
+      motionMode: deriveMotionMode(state)
+    }));
+  }, THEME_OVERRIDE_DECAY_MS);
+}
+
 export function applyEvent(type: string, data: unknown): void {
   appStore.update((state) => {
     const next: AppState = { ...state };
@@ -87,7 +108,7 @@ export function applyEvent(type: string, data: unknown): void {
         return state;
     }
 
-    next.motionMode = deriveMotionMode(next);
+    next.motionMode = next.themeOverride ?? deriveMotionMode(next);
     return next;
   });
 }
