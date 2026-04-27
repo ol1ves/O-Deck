@@ -507,7 +507,7 @@
 
   .weather-sparkline-btn {
     margin-left: auto;
-    padding: 0 0 4px;
+    padding: 0;
     border: 0;
     background: none;
     cursor: pointer;
