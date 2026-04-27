@@ -292,7 +292,6 @@
 
 <style>
   :global(.odeck-screen) {
-    min-height: 100vh;
     background: var(--bg);
   }
 
@@ -693,6 +692,7 @@
 
   .home-footer {
     gap: 16px;
+    margin-top: auto;
     padding-top: 10px;
     border-top: 1px solid var(--line);
   }
