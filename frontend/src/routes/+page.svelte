@@ -103,7 +103,7 @@
 <ODScreen {mode}>
   <header class="status-bar">
     <div class="status-left">
-      <span class="brand">O-DECK</span>
+      <button type="button" class="brand brand-button" onclick={() => goto('/')} aria-label="home">O-DECK</button>
       <span class="callsign">/od-04</span>
       <span><span class="live-dot">●</span> odeck.local</span>
       <span class="dim">up 4d 11h</span>
@@ -330,6 +330,17 @@
   .brand {
     color: var(--ink);
     font-weight: 500;
+  }
+
+  .brand-button {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--ink);
+    font: inherit;
+    font-weight: 500;
+    letter-spacing: inherit;
+    cursor: pointer;
   }
 
   .callsign,
