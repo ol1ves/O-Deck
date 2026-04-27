@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { goto } from '$app/navigation';
+
   let {
     app = '',
     accent = 'var(--sand)',
@@ -10,7 +12,7 @@
 
 <header class="od-status-bar" style:--od-status-accent={accent}>
   <div class="od-status-bar__left">
-    <span class="od-status-bar__brand">O-DECK</span>
+    <button type="button" class="od-status-bar__brand od-status-bar__brand-button" onclick={() => goto('/')} aria-label="home">O-DECK</button>
     {#if app}
       <span class="od-status-bar__separator">/</span>
       <span class="od-status-bar__app">{app}</span>
@@ -56,6 +58,18 @@
   .od-status-bar__brand {
     color: var(--ink);
     font-weight: 500;
+  }
+
+  .od-status-bar__brand-button {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--ink);
+    font: inherit;
+    font-weight: 500;
+    letter-spacing: inherit;
+    text-transform: inherit;
+    cursor: pointer;
   }
 
   .od-status-bar__separator {
