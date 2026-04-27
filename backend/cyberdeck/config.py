@@ -13,8 +13,8 @@ ENV_PATH = CONFIG_DIR / ".env"
 
 
 class Resolution(BaseModel):
-    width: int = 1024
-    height: int = 600
+    width: int = 800
+    height: int = 480
 
 
 class Location(BaseModel):

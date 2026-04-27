@@ -21,7 +21,7 @@ ExecStart=/usr/bin/chromium-browser \
   --enable-features=OverlayScrollbar \
   --touch-events=enabled \
   --ozone-platform=wayland \
-  --window-size=1024,600 \
+  --window-size=800,480 \
   --disable-pinch \
   --overscroll-history-navigation=0 \
   http://localhost:8080

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # install.sh — O-Deck one-shot installer for Raspberry Pi OS Bookworm 64-bit
 # Prerequisites:
-#   - Repo already cloned to ~/cyberdeck
+#   - Repo cloned anywhere (installer detects its own path)
 #   - Run as the regular user (not root)
 #   - Internet connectivity
 set -euo pipefail
@@ -155,8 +155,8 @@ info "Step 7/10: Systemd user services"
 UNIT_DIR="${HOME}/.config/systemd/user"
 mkdir -p "${UNIT_DIR}"
 
-cp systemd/cyberdeck-backend.service "${UNIT_DIR}/"
-cp systemd/cyberdeck-kiosk.service   "${UNIT_DIR}/"
+sed "s|CYBERDECK_REPO_DIR|${REPO_DIR}|g" systemd/cyberdeck-backend.service > "${UNIT_DIR}/cyberdeck-backend.service"
+cp systemd/cyberdeck-kiosk.service "${UNIT_DIR}/"
 
 systemctl --user daemon-reload
 systemctl --user enable cyberdeck-backend.service

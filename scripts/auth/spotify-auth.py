@@ -22,7 +22,7 @@ except ImportError:
     sys.exit(1)
 
 SCOPE = "user-read-currently-playing user-read-playback-state"
-REDIRECT_URI = "http://localhost:8889/callback"
+REDIRECT_URI = "http://127.0.0.1:8889/callback"
 AUTH_URL = "https://accounts.spotify.com/authorize"
 TOKEN_URL = "https://accounts.spotify.com/api/token"
 

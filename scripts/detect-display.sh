@@ -16,7 +16,7 @@ detect_resolution() {
     if [[ -n "$mode" ]]; then
       width="${mode%x*}"
       height="${mode#*x}"
-      echo "Detected via wlr-randr: ${width}x${height}"
+      echo "Detected via wlr-randr: ${width}x${height}" >&2
       echo "${width} ${height}"
       return
     fi
@@ -29,7 +29,7 @@ detect_resolution() {
     if [[ -n "$mode" ]]; then
       width="${mode%x*}"
       height="${mode#*x}"
-      echo "Detected via xrandr: ${width}x${height}"
+      echo "Detected via xrandr: ${width}x${height}" >&2
       echo "${width} ${height}"
       return
     fi
@@ -41,7 +41,7 @@ detect_resolution() {
   if [[ -n "$drm_modes" ]]; then
     width="${drm_modes%x*}"
     height="${drm_modes#*x}"
-    echo "Detected via /sys/class/drm: ${width}x${height}"
+    echo "Detected via /sys/class/drm: ${width}x${height}" >&2
     echo "${width} ${height}"
     return
   fi
