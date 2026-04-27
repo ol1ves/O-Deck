@@ -188,3 +188,16 @@ async def test_run_swallows_http_error_and_increments_error_count(tmp_path):
     await integration.run()
 
     assert integration.status["error_count"] == 1
+
+
+@pytest.mark.asyncio
+@respx.mock
+@pytest.mark.parametrize("status_code", [401, 500])
+async def test_run_treats_empty_now_playing_error_response_as_error(tmp_path, status_code):
+    respx.post(TOKEN_URL).mock(return_value=token_response())
+    respx.get(NOW_PLAYING_URL).mock(return_value=httpx.Response(status_code))
+
+    integration = make_integration(cache=Cache(db_path=tmp_path / "c.db"), ws=WSManager())
+    await integration.run()
+
+    assert integration.status["error_count"] == 1

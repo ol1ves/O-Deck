@@ -38,9 +38,11 @@ class SpotifyIntegration(Integration):
                 _NOW_PLAYING_URL,
                 headers={"Authorization": f"Bearer {access_token}"},
             )
-            if response.status_code == 204 or not response.content:
+            if response.status_code == 204:
                 return dict(EMPTY_STATE)
             response.raise_for_status()
+            if not response.content:
+                return dict(EMPTY_STATE)
             return _playing_state(response.json())
 
     @property
