@@ -9,6 +9,7 @@
   import Sparkline from '$lib/components/Sparkline.svelte';
   import Ticker from '$lib/components/Ticker.svelte';
   import WeatherIcon from '$lib/components/WeatherIcon.svelte';
+  import { format_uptime_label } from '$lib/format';
   import { appStore } from '$lib/ws';
 
   const lineColors: Record<string, string> = {
@@ -78,6 +79,13 @@
   };
 
   const state = $derived($appStore);
+  const device = $derived(state.device);
+  const liveUptimeSeconds = $derived(
+    state.uptimeOriginSeconds + (now.getTime() - state.uptimePolledAt) / 1000
+  );
+  const uptimeLabel = $derived(format_uptime_label(liveUptimeSeconds));
+  const callsign = $derived(device?.callsign ? `/${device.callsign}` : '');
+  const lanLabel = $derived(device?.lan_ip ?? device?.hostname ?? '...');
   const weather = $derived(state.weather);
   const transit = $derived(state.transit);
   const spotify = $derived(state.spotify);
@@ -104,9 +112,9 @@
   <header class="status-bar">
     <div class="status-left">
       <button type="button" class="brand brand-button" onclick={() => goto('/')} aria-label="home">O-DECK</button>
-      <span class="callsign">/od-04</span>
-      <span><span class="live-dot">●</span> odeck.local</span>
-      <span class="dim">up 4d 11h</span>
+      {#if callsign}<span class="callsign">{callsign}</span>{/if}
+      <span><span class="live-dot">●</span> {lanLabel}</span>
+      <span class="dim">up {uptimeLabel}</span>
     </div>
     <div class="status-right">
       <span class:music={mode === 'music'} class:rain={mode === 'rain'} class:thunder={mode === 'thunder'}>◌ {mode}</span>
